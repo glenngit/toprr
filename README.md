@@ -45,6 +45,37 @@ the free **1000 calls/month** quota. Feed results are also cached in-memory for
 (used / remaining) is shown on the Dashboard, read from the API's response
 headers.
 
+## Prerequisites
+
+Before you can use toprr you need **a Streaming Availability API key** — the app
+cannot fetch any Top 10 data without it.
+
+1. **Streaming Availability API key — required.** Sign up (free or paid) at
+   **<https://www.movieofthenight.com/signup>**. The **free tier includes 1000
+   requests per month**, which is plenty for a once-a-day run tracking a handful
+   of services (one request per selected service per run). This key is what
+   enables the whole product.
+2. **Radarr and/or Sonarr — required to request titles.** Movies are requested
+   to **Radarr**, TV to **Sonarr**, and both report the live library status
+   shown in the GUI. You need at least one of them (Radarr for movies, Sonarr for
+   TV) with its URL + API key. This is the **default** request path — no Seerr
+   required.
+3. **Seerr — optional.** If you prefer to route requests through **Seerr**
+   instead of hitting Radarr/Sonarr directly, set the request provider to Seerr
+   and provide its URL + API key. Entirely optional.
+4. **TMDB API key — strongly recommended (optional).** ⭐ **The TMDB v3 key is
+   what enables TMDB user ratings, posters, original language, season/episode
+   counts and the overview.** Without it toprr still works, but the plan/history
+   show **no ratings or poster images** and TMDB-only columns display "—". If you
+   want the rich, informative listing, get a free key from
+   [TMDB → Settings → API](https://www.themoviedb.org/settings/api) and add it in
+   Settings. Only the metadata lookup needs the key; poster images come from
+   TMDB's public CDN.
+
+> You enter all of these in the **first-run wizard** / **Settings** — no file
+> editing required. The environment variables below are only for seeding or
+> headless CLI use.
+
 ## Setup
 
 Requires Node.js 18+ (tested on Node 22).
