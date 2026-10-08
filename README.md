@@ -69,8 +69,11 @@ cannot fetch any Top 10 data without it.
    show **no ratings or poster images** and TMDB-only columns display "—". If you
    want the rich, informative listing, get a free key from
    [TMDB → Settings → API](https://www.themoviedb.org/settings/api) and add it in
-   Settings. Only the metadata lookup needs the key; poster images come from
-   TMDB's public CDN.
+   Settings. On that page TMDB shows **two** credentials — toprr accepts
+   **either**: the short **API Key (v3 auth)** (32-char hex) or the long
+   **API Read Access Token (v4 auth)** (an `eyJ…` token). Only the metadata
+   lookup needs the key; poster images come from TMDB's public CDN. Use the
+   **Test key** button in Settings to confirm it's valid.
 
 > You enter all of these in the **first-run wizard** / **Settings** — no file
 > editing required. The environment variables below are only for seeding or
@@ -228,15 +231,32 @@ calls to the media CDN. Services without a logo fall back to their name.
 
 ### TMDB enrichment & caching
 
-Set an optional **TMDB API key** (v3) in Settings to enrich the dry-run plan
+Set an optional **TMDB API key** in Settings to enrich the dry-run plan
 with **posters, user score, original language, season/episode counts and the
-overview** (shown on row hover). Poster images come from TMDB's CDN; only the
-metadata lookup needs the key. Without a key, the plan still works — posters
-fall back to a placeholder and TMDB-only columns show "—".
+overview** (shown on row hover). toprr accepts **either** TMDB credential — the
+v3 **API Key** or the v4 **API Read Access Token** — and picks the right auth
+automatically. Poster images come from TMDB's CDN; only the metadata lookup
+needs the key. Without a key, the plan still works — posters fall back to a
+placeholder and TMDB-only columns show "—".
 
 Feed results from the Streaming Availability API are cached in-memory for
 **1 hour** (per country + services + limit), so repeated dashboard checks don't
 consume your monthly API quota.
+
+### Troubleshooting: no posters, score, or language
+
+If the plan/history shows **no poster images, no TMDB score, and the Language
+column is "—"**, your TMDB credential is almost certainly missing or invalid.
+TMDB's [Settings → API](https://www.themoviedb.org/settings/api) page lists
+**two** values and it's easy to grab the wrong one:
+
+- **API Key (v3 auth)** — a short **32-character hex** string.
+- **API Read Access Token (v4 auth)** — a long **`eyJ…`** token.
+
+toprr accepts **either**, so paste whichever you have. Then hit the **Test key**
+button in **Settings → API keys**: it confirms "Valid TMDB key / v4 token" or
+tells you it's invalid. (If you set the key via `TMDB_API_KEY` in `.env`, the
+same rule applies.)
 
 ### HTTP API
 
@@ -384,7 +404,7 @@ initial config (and support headless CLI use):
 | Env var                          | Default | Description                                       |
 | -------------------------------- | ------- | ------------------------------------------------- |
 | `STREAMING_AVAILABILITY_API_KEY` | —       | Streaming Availability key (sent as `X-API-Key`). |
-| `TMDB_API_KEY`                   | —       | Optional TMDB v3 key — enables posters, score, language, seasons. |
+| `TMDB_API_KEY`                   | —       | Optional TMDB key — v3 API key **or** v4 Read Access Token; enables posters, score, language, seasons. |
 | `FEED_COUNTRY`                   | `us`    | ISO 3166-1 alpha-2 country code.                  |
 | `FEED_SERVICES`                  | `apple,netflix,prime,hbo` | Comma-separated service codes (seed only). |
 | `FEED_LIMIT`                     | `10`    | Items per Top list.                               |
