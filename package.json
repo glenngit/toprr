@@ -1,6 +1,6 @@
 {
   "name": "toprr",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Fetches the daily Top 10 movies and TV shows from Apple TV, Netflix, Amazon Prime and HBO Max (Max) via the Streaming Availability API. Text-only feed for downstream services.",
   "type": "module",
   "main": "dist/index.js",

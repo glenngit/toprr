@@ -34,6 +34,10 @@ export interface FeedEntry {
   services: ServiceCode[];
   /** Best (lowest) rank the title achieved across all lists it appeared in. */
   bestRank: number;
+  /** True only if every appearance was an *upcoming* (not-yet-streaming) one. */
+  upcoming?: boolean;
+  /** Earliest announced availability date (Unix seconds), when known. */
+  availableAt?: number;
 }
 
 /**
@@ -111,6 +115,15 @@ export function dedupeFeed(feed: Feed): FeedEntry[] {
     if (existing) {
       if (!existing.services.includes(service)) existing.services.push(service);
       existing.bestRank = Math.min(existing.bestRank, item.rank);
+      // A title is only "upcoming" if EVERY appearance is upcoming. A real
+      // (currently-streaming) appearance clears the flag.
+      if (!item.upcoming) existing.upcoming = false;
+      if (item.upcoming && item.availableAt !== undefined) {
+        existing.availableAt =
+          existing.availableAt === undefined
+            ? item.availableAt
+            : Math.min(existing.availableAt, item.availableAt);
+      }
       // Keep the first-seen details; they describe the same title.
       return;
     }
@@ -130,16 +143,22 @@ export function dedupeFeed(feed: Feed): FeedEntry[] {
       poster: item.poster,
       services: [service],
       bestRank: item.rank,
+      upcoming: item.upcoming === true,
+      availableAt: item.upcoming ? item.availableAt : undefined,
     });
   };
 
   for (const svc of feed.services) {
     for (const movie of svc.movies) consider(movie, svc.service);
     for (const series of svc.series) consider(series, svc.service);
+    for (const up of svc.upcoming ?? []) consider(up, svc.service);
   }
 
   return [...byKey.values()].sort(
-    (a, b) => a.bestRank - b.bestRank || a.title.localeCompare(b.title),
+    (a, b) =>
+      Number(a.upcoming ?? false) - Number(b.upcoming ?? false) ||
+      a.bestRank - b.bestRank ||
+      a.title.localeCompare(b.title),
   );
 }
 

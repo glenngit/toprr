@@ -25,8 +25,12 @@ function item(partial: Partial<FeedItem>): FeedItem {
   };
 }
 
-function feedWith(services: Feed["services"]): Feed {
-  return { country: "us", generatedAt: "2026-01-01T00:00:00.000Z", services };
+function feedWith(services: Array<Omit<Feed["services"][number], "upcoming"> & { upcoming?: Feed["services"][number]["upcoming"] }>): Feed {
+  return {
+    country: "us",
+    generatedAt: "2026-01-01T00:00:00.000Z",
+    services: services.map((s) => ({ upcoming: [], ...s })),
+  };
 }
 
 test("parseTmdbId strips the type prefix and returns a number", () => {

@@ -183,7 +183,7 @@ function openDetailsModal(e) {
         <div class="dt-head">
           <h2>${esc(e.title)}${e.year ? ` <span class="muted">(${e.year})</span>` : ""}</h2>
           ${e.originalTitle && e.originalTitle !== e.title ? `<p class="muted dt-orig">${esc(e.originalTitle)}</p>` : ""}
-          <div class="dt-meta">${typeBadge(e.mediaType)} ${score} ${runtimeTxt ? `<span class="muted">${esc(runtimeTxt)}</span>` : ""}</div>
+          <div class="dt-meta">${typeBadge(e.mediaType)} ${score} ${upcomingBadge(e)} ${runtimeTxt ? `<span class="muted">${esc(runtimeTxt)}</span>` : ""}</div>
           ${genresTxt}
           <div class="dt-services">${servicesCell(e.services)}</div>
         </div>
@@ -562,6 +562,15 @@ async function loadRecent() {
 // ---- About page (version + changelog) ----
 const CHANGELOG = [
   {
+    version: "1.0.1", date: "2026-10",
+    changes: [
+      "Upcoming titles: the feed now includes announced, not-yet-streaming shows (via the Changes API), clearly marked with an “UPCOMING” badge and release date when known.",
+      "TMDB: accept either the v3 API key or the v4 Read Access Token, with Test-key buttons for the Streaming Availability and TMDB keys in Settings.",
+      "Static files (docs, OpenAPI) now require authentication; login-screen assets stay public.",
+      "Fixes: Requests page posters/library status now load; mobile hamburger drawer covers the full screen; centered modal close button.",
+    ],
+  },
+  {
     version: "1.0.0", date: "2026-10",
     changes: [
       "Mobile navigation: hamburger drawer with Dashboard, Requests, Settings, Documentation and API, and About.",
@@ -778,6 +787,17 @@ function typeBadge(mediaType) {
   return `<span class="typebadge ${tv ? "tv" : "movie"}">${icon}${tv ? "TV" : "Movie"}</span>`;
 }
 
+// Badge shown next to a title that is an upcoming (not-yet-streaming) release.
+function upcomingBadge(e) {
+  if (!e || !e.upcoming) return "";
+  let when = "coming soon";
+  if (typeof e.availableAt === "number") {
+    const d = new Date(e.availableAt * 1000);
+    if (!isNaN(d)) when = d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
+  return ` <span class="pill upcoming" title="Not yet streaming — ${esc(when)}">UPCOMING · ${esc(when)}</span>`;
+}
+
 function scoreBadge(v) {
   if (typeof v !== "number" || v <= 0) return `<span class="muted">—</span>`;
   const cls = v >= 7 ? "ok" : v >= 5 ? "warn" : "err";
@@ -982,7 +1002,7 @@ function renderPlan(plan) {
     return `<tr${overview}>
       <td class="c-pick"><label class="chk"><input type="checkbox" class="pick" data-key="${entryKey(e)}" /><span class="chk-box"></span></label></td>
       <td class="c-poster"><span class="detail-open" data-key="${entryKey(e)}" role="button" tabindex="0">${posterCell(e)}</span></td>
-      <td class="c-title"><span class="detail-open title-link" data-key="${entryKey(e)}" role="button" tabindex="0">${esc(e.title)}</span>${e.year ? ` <span class="muted yr-inline">(${e.year})</span>` : ""}</td>
+      <td class="c-title"><span class="detail-open title-link" data-key="${entryKey(e)}" role="button" tabindex="0">${esc(e.title)}</span>${e.year ? ` <span class="muted yr-inline">(${e.year})</span>` : ""}${upcomingBadge(e)}</td>
       <td data-label="Type">${typeBadge(e.mediaType)}</td>
       <td data-label="Year">${e.year ?? "—"}</td>
       <td data-label="TMDB">${scoreBadge(e.tmdbScore)}</td>
