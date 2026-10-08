@@ -5,9 +5,12 @@ services:
     # image: registry.gitlab.com/<you>/toprr:latest
     container_name: toprr
     restart: unless-stopped
-    # Bind to localhost only; terminate TLS and expose via your reverse proxy.
+    # Published on all interfaces so it's reachable from other machines.
+    # SECURITY: this exposes the raw HTTP port on your LAN. For public/internet
+    # use, put a TLS-terminating reverse proxy in front and bind to localhost
+    # only instead:  "127.0.0.1:9797:9797"
     ports:
-      - "127.0.0.1:9797:9797"
+      - "9797:9797"
     environment:
       PORT: "9797"
       LOG_DIR: /app/logs
