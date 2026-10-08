@@ -523,14 +523,16 @@
       <h2>API keys</h2>
       <p class="desc">Keys are stored server-side and never shown in full. Leave a key blank to keep the existing value.</p>
       <div class="field">
-        <label>Streaming Availability API key</label>
+        <label>Streaming Availability API key <span class="muted">(movieofthenight.com)</span></label>
         <input type="password" id="apiKey" placeholder="(leave blank to keep existing)" />
         <div class="hint" id="apiKeyHint"></div>
+        <div class="btnrow"><button class="ghost btn-verify" data-kind="streaming">Test key</button><span class="verify-msg" id="streamingVerify"></span></div>
       </div>
       <div class="field">
-        <label>TMDB API key <span class="muted">(optional — enables posters, score, language, seasons)</span></label>
+        <label>TMDB API key <span class="muted">(optional — v3 key enables posters, score, language, seasons)</span></label>
         <input type="password" id="tmdbKey" placeholder="(leave blank to keep existing)" />
         <div class="hint" id="tmdbKeyHint"></div>
+        <div class="btnrow"><button class="ghost btn-verify" data-kind="tmdb">Test key</button><span class="verify-msg" id="tmdbVerify"></span></div>
       </div>
       <div class="action-bar" style="border-top:none;padding-top:0;margin-top:4px">
         <button class="primary" id="btnSaveKeys">Save keys</button>

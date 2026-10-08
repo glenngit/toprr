@@ -1183,7 +1183,10 @@ document.querySelectorAll(".btn-verify").forEach((btn) => btn.addEventListener("
   const kind = btn.dataset.kind;
   const msg = $(`${kind}Verify`);
   const url = ($(`${kind}Url`) || {}).value || "";
-  const key = ($(`${kind}Key`) || {}).value || "";
+  // The Streaming Availability key input is #apiKey (not #streamingKey); every
+  // other kind follows the #{kind}Key convention.
+  const keyInputId = kind === "streaming" ? "apiKey" : `${kind}Key`;
+  const key = ($(keyInputId) || {}).value || "";
   msg.innerHTML = spinnerInline("Verifying…"); msg.className = "verify-msg";
   try {
     const r = await api("/api/test-connection", {
