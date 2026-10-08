@@ -77,7 +77,10 @@ login screen, and other non-allowlisted static files return `401`.
 
 - **Terminate TLS at your reverse proxy.** toprr speaks HTTP; run it behind a
   proxy that enforces HTTPS so the `Secure` cookie and credentials are protected
-  in transit. Do not expose the raw HTTP port to the internet.
+  in transit. Do not expose the raw HTTP port to the internet. **Note:** the
+  shipped `docker-compose.yml` publishes the port on **all interfaces**
+  (`9797:9797`) for easy LAN testing — for public/internet use, change this to
+  the `127.0.0.1:9797:9797` bind and reach the app only through your proxy.
 - **Trust the `X-Forwarded-For` header only from your proxy.** Rate limiting keys
   on it; a direct-to-app attacker could spoof it. Ensure only the proxy can reach
   the app port.

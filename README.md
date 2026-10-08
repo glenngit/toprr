@@ -336,21 +336,23 @@ they survive `docker compose down && up`. The container runs `read_only` with
 
 ### Reaching it from another device
 
-By default the compose file binds to `127.0.0.1:9797` (localhost only) — the
-safe default for running behind a reverse proxy. To reach it from another
-machine on your LAN while testing, change the port mapping in
-`docker-compose.yml`:
+By default the compose file binds to **all interfaces** (`9797:9797`), so the
+GUI is reachable from other machines on your network at
+`http://<host-ip>:9797` — convenient for a quick LAN deploy. (If a host
+firewall is active, allow inbound TCP `9797`.)
+
+For **public/internet exposure**, don't expose the raw HTTP port. Restrict the
+bind to localhost and put a TLS-terminating reverse proxy (Caddy, nginx,
+Traefik) in front — change the port mapping in `docker-compose.yml`:
 
 ```yaml
     ports:
-      - "9797:9797"   # all interfaces (LAN) instead of 127.0.0.1:9797
+      - "127.0.0.1:9797:9797"   # localhost only — reach it via your reverse proxy
 ```
 
-For public/internet exposure, keep the `127.0.0.1` bind and put a
-TLS-terminating reverse proxy (Caddy, nginx, Traefik) in front — never expose
-the raw HTTP port. Forward `X-Forwarded-Proto: https` so the session cookie gets
-the `Secure` flag, and ensure only the proxy can reach the app port (rate
-limiting trusts `X-Forwarded-For`).
+Forward `X-Forwarded-Proto: https` so the session cookie gets the `Secure`
+flag, and ensure only the proxy can reach the app port (rate limiting trusts
+`X-Forwarded-For`).
 
 ### Reverse proxies
 
@@ -370,7 +372,7 @@ Both are optional — the app runs fine without them — but forwarding them is
 recommended for correct `Secure`-cookie and rate-limit behaviour. There are no
 custom headers, no sub-path rewriting, and no app settings to change; the only
 hardening step is the usual one of making sure **only the proxy can reach the
-app port** (keep the `127.0.0.1` bind).
+app port** (switch the port mapping to the `127.0.0.1` bind shown above).
 
 ### Verify it's up
 
