@@ -81,28 +81,33 @@ cannot fetch any Top 10 data without it.
 
 ## Setup
 
-Requires Node.js 18+ (tested on Node 22).
+The easiest path is **Docker** (see [Deployment](#deployment-docker--pull--run)
+below): `docker compose up -d`, open the GUI, and the **first-run wizard** walks
+you through creating an admin account and entering your keys — **no `.env`, no
+file editing**. All keys (Streaming Availability, TMDB, Radarr/Sonarr/Seerr) are
+entered in the wizard / **Settings** and stored server-side.
+
+To run from source instead (requires Node.js 18+, tested on Node 22):
 
 ```bash
 npm install
-cp .env.example .env   # then edit .env and set your key
+npm run build
+npm run serve        # then open http://localhost:9797 and complete the wizard
 ```
 
-### Authentication
+### How the API key is used
 
-The API authenticates via an **`X-API-Key`** request header, which the client
-sends automatically from the key you provide. See the
+The Streaming Availability API authenticates via an **`X-API-Key`** header, which
+the client sends automatically from the key you entered in the wizard / Settings.
+Keys live **server-side only** (in `data/config.json`, git-ignored) and are never
+sent to the browser. See the
 [Authentication guide](https://docs.movieofthenight.com/guide/authentication).
 
-Set your key in `.env`:
-
-```
-STREAMING_AVAILABILITY_API_KEY=your-api-key-here
-FEED_COUNTRY=us
-```
-
-`.env` is git-ignored so your key is never committed. **Keep this server-side** —
-using the key in a browser would expose it publicly.
+> **Optional — headless / CLI seeding.** If you run the CLI commands below (or
+> want to pre-seed config on first boot) you can instead put keys in a `.env`
+> file (`cp .env.example .env`). This is **not required** for the GUI — the
+> wizard is the normal way to configure everything. See
+> [Configuration](#configuration) for the full list of seed variables.
 
 ## Usage
 
