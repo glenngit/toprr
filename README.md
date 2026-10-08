@@ -327,6 +327,26 @@ the raw HTTP port. Forward `X-Forwarded-Proto: https` so the session cookie gets
 the `Secure` flag, and ensure only the proxy can reach the app port (rate
 limiting trusts `X-Forwarded-For`).
 
+### Reverse proxies
+
+toprr works out of the box behind any standard reverse proxy or CDN —
+**HAProxy, NGINX, Caddy, Traefik, Cloudflare** and the like. **Nothing needs to
+be configured inside the application** for them to work: toprr is a plain HTTP
+server with no base-path assumptions, so you just point the proxy at it and go.
+It already honours the two de-facto standard forwarded headers:
+
+- `X-Forwarded-Proto: https` — tells toprr the external connection is TLS, so it
+  sets the session cookie's `Secure` flag. (Most proxies send this automatically;
+  with Cloudflare it's set for you.)
+- `X-Forwarded-For` — used for login rate-limiting, so limits apply to the real
+  client IP rather than the proxy's.
+
+Both are optional — the app runs fine without them — but forwarding them is
+recommended for correct `Secure`-cookie and rate-limit behaviour. There are no
+custom headers, no sub-path rewriting, and no app settings to change; the only
+hardening step is the usual one of making sure **only the proxy can reach the
+app port** (keep the `127.0.0.1` bind).
+
 ### Verify it's up
 
 ```bash
