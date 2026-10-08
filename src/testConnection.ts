@@ -59,12 +59,18 @@ export async function testConnection(
     }
 
     if (kind === "tmdb") {
-      const { status } = await getJson(
-        `https://api.themoviedb.org/3/configuration?api_key=${encodeURIComponent(apiKey)}`,
-        {},
-      );
-      if (status === 200) return { ok: true, message: "Valid TMDB key." };
-      if (status === 401) return { ok: false, message: "Invalid TMDB API key." };
+      // Accept either a v3 key (?api_key=) or a v4 Read Access Token (Bearer).
+      const isV4 = apiKey.startsWith("eyJ") || apiKey.split(".").length === 3;
+      const { status } = isV4
+        ? await getJson("https://api.themoviedb.org/3/configuration", {
+            Authorization: `Bearer ${apiKey}`,
+          })
+        : await getJson(
+            `https://api.themoviedb.org/3/configuration?api_key=${encodeURIComponent(apiKey)}`,
+            {},
+          );
+      if (status === 200) return { ok: true, message: `Valid TMDB ${isV4 ? "v4 token" : "key"}.` };
+      if (status === 401) return { ok: false, message: "Invalid TMDB API key / token." };
       return { ok: false, message: `TMDB returned HTTP ${status}.` };
     }
 

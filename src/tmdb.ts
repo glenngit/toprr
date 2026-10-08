@@ -37,6 +37,25 @@ export class TmdbClient {
     return Boolean(this.apiKey);
   }
 
+  /**
+   * TMDB offers two credentials on the same Settings → API page:
+   *  - v3 "API Key" (short, 32-char hex) → sent as `?api_key=`
+   *  - v4 "API Read Access Token" (a long `eyJ…` JWT) → sent as a Bearer header
+   * Accept either: detect a JWT (two dots / `eyJ` prefix) and pick the right
+   * auth so the user can paste whichever value TMDB shows them.
+   */
+  private isV4Token(): boolean {
+    return this.apiKey.startsWith("eyJ") || this.apiKey.split(".").length === 3;
+  }
+  /** Build the request URL + headers for a given `/3/...` path (sans query). */
+  private authFor(url: string): { url: string; headers: Record<string, string> } {
+    if (this.isV4Token()) {
+      return { url, headers: { Authorization: `Bearer ${this.apiKey}`, accept: "application/json" } };
+    }
+    const sep = url.includes("?") ? "&" : "?";
+    return { url: `${url}${sep}api_key=${encodeURIComponent(this.apiKey)}`, headers: {} };
+  }
+
   private posterUrl(
     path: string | null | undefined,
     size: "w92" | "w154" | "w185" | "w342" = "w154",
@@ -58,10 +77,8 @@ export class TmdbClient {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
-      const res = await fetch(
-        `https://api.themoviedb.org/3/${kind}/${tmdbId}?api_key=${encodeURIComponent(this.apiKey)}`,
-        { signal: controller.signal },
-      );
+      const req = this.authFor(`https://api.themoviedb.org/3/${kind}/${tmdbId}`);
+      const res = await fetch(req.url, { headers: req.headers, signal: controller.signal });
       if (!res.ok) {
         this.cache.set(key, null);
         return null;
