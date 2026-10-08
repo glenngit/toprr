@@ -1,12 +1,16 @@
 # toprr — Top 10 Streaming Feed
 
 A deployable TypeScript app that fetches the daily **Top 10 movies and TV shows**
-from your chosen streaming services (Apple TV, Netflix, Amazon Prime Video,
-HBO Max and more) using the
+from your chosen streaming services using the
 [Streaming Availability API](https://www.movieofthenight.com/about/api),
-deduplicates them into a single feeding list, and feeds genuinely new titles to
-**Overseerr / Jellyseerr** — never re-requesting anything already in your
-library.
+deduplicates them into a single feeding list, and requests genuinely new titles
+via **Radarr / Sonarr** (or optionally **Seerr**) — never
+re-requesting anything already in your library.
+
+The services you can pick are **discovered live from the API per country**, so
+the exact list depends on where you are — common ones include Netflix, Amazon
+Prime Video, Disney+, Apple TV, Max, Hulu, Paramount+, Peacock and many regional
+providers. You choose which to track in the GUI.
 
 It ships with a **web GUI** (default port **9797**) to configure everything
 (API keys, country, services), run syncs, and watch request status pulled live
@@ -20,25 +24,26 @@ services can pull the latest list directly.
 - Uses the official [`streaming-availability`](https://github.com/movieofthenight/ts-streaming-availability)
   TypeScript client.
 - Calls the **Get Top Shows** endpoint (`client.showsApi.getTopShows`) **once per
-  service**. A single unfiltered call returns both movies and series (ordered by
-  rank), which we split client-side — so the run uses **4 API calls total**, not
-  8. Top lists are determined by each streaming service itself and refreshed
-  **daily** by the API.
-- Services tracked (API service codes):
-  | Service              | Code      |
-  | -------------------- | --------- |
-  | Apple TV             | `apple`   |
-  | Netflix              | `netflix` |
-  | Amazon Prime Video   | `prime`   |
-  | HBO Max (Max)        | `hbo`     |
+  selected service**. A single unfiltered call returns both movies and series
+  (ordered by rank), which we split client-side. Top lists are determined by
+  each streaming service itself and refreshed **daily** by the API.
+- **Services are discovered live per country** via the `/api/countries` endpoint
+  (which services your API key supports where). You pick which ones to track in
+  the GUI — there's no fixed list baked into the app. A fresh install seeds a
+  small sensible default set (Apple TV, Netflix, Amazon Prime Video, Max) that
+  you can change immediately.
 
 > Note: for some service/type combinations the API returns fewer than 10 titles.
-> The feed includes whatever the API provides, up to 10.
+> The feed includes whatever the API provides, up to the configured limit.
 
 ### API usage
 
-Each run makes **4 calls** (one per service). Running once a day is
-**~120 calls/month** — well within the free 1000/month quota.
+Each run makes **one call per selected service** (so tracking 4 services = 4
+calls). Running once a day with a handful of services stays comfortably within
+the free **1000 calls/month** quota. Feed results are also cached in-memory for
+**1 hour**, so repeated dashboard checks don't spend extra quota. The live quota
+(used / remaining) is shown on the Dashboard, read from the API's response
+headers.
 
 ## Setup
 
@@ -89,19 +94,20 @@ npm run build
 npm start
 ```
 
-### Seerr integration (Overseerr / Jellyseerr)
+### Request handling (Radarr / Sonarr, or Seerr)
 
-`sync` builds the deduplicated feed, then for each title checks your Seerr
-instance and **skips anything that already exists or has already been
-requested** (library status pending/processing/partially-available/available,
-or an existing request). Only genuinely new titles are requested.
+`sync` builds the deduplicated feed, then for each title checks your backend and
+**skips anything that already exists or has already been requested**. Only
+genuinely new titles are requested. The **default provider is Radarr / Sonarr
+directly** (no Seerr needed); set `REQUEST_PROVIDER=seerr` (or pick it in
+Settings) to route through **Seerr** instead.
 
 - **IDs**: requests use the numeric TMDB id (parsed from the Streaming
   Availability API's `movie/…` / `tv/…` form) routed by media type —
   movies to Radarr, TV to Sonarr.
-- **Quality profile & root folder**: not overridden — Seerr applies each
-  default server's defaults (e.g. Sonarr `HD - 720p/1080p` → `/media/TV6`,
-  Radarr `HD-1080p` → `/media/Movies6`).
+- **Quality profile & root folder**: with Radarr/Sonarr direct you may pick a
+  quality profile and root folder per backend in Settings (otherwise the
+  backend defaults apply). With Seerr, each default server's own defaults apply.
 - **TV seasons**: in the GUI you choose seasons **per show** — the default is
   **Season 1 only** (so an old multi-season show in the Top 10 doesn't pull
   every season), with one-click **All**, **S1 only**, or a per-season checkbox
@@ -110,7 +116,8 @@ or an existing request). Only genuinely new titles are requested.
 - `sync` is a **dry run** by default; `sync:submit` is required to actually
   submit. This makes the automated once-a-day run safe to review first.
 
-Requires `SEERR_URL` and `SEERR_API_KEY` in `.env`.
+Radarr/Sonarr are configured with their URL + API key; Seerr (if used) needs
+`SEERR_URL` and `SEERR_API_KEY`. All of this can be set in Settings or via `.env`.
 
 ### Example (text)
 
@@ -141,21 +148,31 @@ npm run web            # dev (tsx)
 npm run build && npm run web:build   # compiled
 ```
 
-Then open <http://localhost:9797>. The GUI is split into two tabs:
+Then open <http://localhost:9797>. The GUI has a top navigation (a hamburger
+drawer on mobile) with these sections:
 
-- **Dashboard** — configured-backend indicators, live Radarr/Sonarr health and
-  queue sizes, request-history totals, and **Check for new titles** (dry run) /
-  **Submit requests** buttons. The dry-run plan is a **sortable table** (click
-  any column header) with, per title: a **TMDB poster**, year, **TMDB user
-  score**, original **language**, **seasons · episodes** (TV), genres, and the
-  services it appeared on. **Hover a row** to see the overview. Each title is
-  **checked by default** — untick what you don't want, then submit only your
-  selection. After submitting, the request history shows each title with a live
-  **library status** ("up to date", percent complete, or "not in library")
-  resolved from Radarr/Sonarr.
+- **Dashboard** — feed settings (country, services, items per list), configured-
+  backend indicators, live Radarr/Sonarr health and queue sizes, the live
+  **Streaming API quota**, and **Check for new titles** (dry run) / **Submit
+  requests** buttons. The dry-run plan is a **sortable table** (click any column
+  header on desktop, or use the sort dropdown on mobile) with, per title: a
+  **TMDB poster**, year, **TMDB user score**, original **language**,
+  **seasons · episodes** (TV), genres, and the services it appeared on. **Hover a
+  row** (or tap for details) to see the overview. Each title is **checked by
+  default** — untick what you don't want, then submit only your selection. A
+  **recent-requests** preview (last 5 on mobile, 10 on desktop) sits below.
+- **Requests** — the full request history with **title search**, a selectable
+  **page size**, and Prev/Next paging. Each row shows a live **library status**
+  ("up to date", percent complete, downloading %, or "not in library") resolved
+  from Radarr/Sonarr, plus retry/remove for failed requests.
 - **Settings** — pick your **country** and toggle the **streaming services**
-  available for it (discovered live from the API via your key), set the items
-  per list, and enter your **API / Seerr / Radarr / Sonarr** keys.
+  available for it (discovered live from the API via your key), set items per
+  list, choose the **request provider** (Radarr/Sonarr direct or Seerr), and
+  enter your **API / TMDB / Radarr / Sonarr / Seerr** keys. Also manage your
+  **account** and generate an **API key** for programmatic access.
+- **Documentation and API** — a short usage guide plus the interactive
+  **Swagger / OpenAPI** reference (served at `/docs`).
+- **About** — app info, version, and changelog.
 
 ### Deployable & multi-user friendly
 
@@ -192,17 +209,23 @@ consume your monthly API quota.
 
 ### HTTP API
 
+A few of the most useful endpoints (the **full, interactive reference** lives in
+the GUI under **Documentation and API**, served at `/docs`, with the raw schema
+at `/openapi.json`):
+
 | Method & path        | Purpose                                              |
 | -------------------- | ---------------------------------------------------- |
-| `GET /api/status`    | Backend health, configured flags, history summary.   |
+| `GET /api/status`    | Backend health, configured flags, history summary, version, quota. |
 | `GET /api/config`    | Current settings (secrets masked).                   |
 | `PATCH /api/config`  | Update settings (blank secret fields are preserved). |
 | `GET /api/countries` | Countries + services your API key supports.          |
 | `GET /api/feed`      | Current deduplicated feeding list.                   |
-| `GET /api/history`   | Request history enriched with live library status.   |
+| `GET /api/history`   | Request history (search via `q`, paged) with live library status. |
 | `POST /api/sync`     | Run sync. Body `{ "submit": true }` to request.      |
 
-All endpoints above require authentication (see below).
+All endpoints except the auth/setup/login routes require authentication (see
+below). The GUI also exposes account, API-key, countries and connection-test
+endpoints — see the OpenAPI reference for the complete list.
 
 ## Security & authentication
 
@@ -240,7 +263,7 @@ mutations must send `X-Requested-With: toprr` (the GUI does this automatically).
 No build tools, API keys, or config files needed up front. Clone and start:
 
 ```bash
-git clone <your-gitlab-url>/toprr.git
+git clone https://github.com/glenngit/toprr.git
 cd toprr
 docker compose up -d        # builds from source and runs
 ```
@@ -293,7 +316,7 @@ const feed = await buildFeed({
   apiKey: process.env.STREAMING_AVAILABILITY_API_KEY!,
   country: "us",                      // optional, defaults to "us"
   limit: 10,                          // optional, defaults to 10
-  services: ["apple", "netflix"],     // optional, defaults to apple/netflix/prime/hbo
+  services: ["apple", "netflix"],     // optional; defaults seed apple/netflix/prime/hbo
 });
 
 // Structured per-service data: feed.services[].movies / .series
@@ -310,12 +333,14 @@ initial config (and support headless CLI use):
 | Env var                          | Default | Description                                       |
 | -------------------------------- | ------- | ------------------------------------------------- |
 | `STREAMING_AVAILABILITY_API_KEY` | —       | Streaming Availability key (sent as `X-API-Key`). |
+| `TMDB_API_KEY`                   | —       | Optional TMDB v3 key — enables posters, score, language, seasons. |
 | `FEED_COUNTRY`                   | `us`    | ISO 3166-1 alpha-2 country code.                  |
-| `FEED_SERVICES`                  | `apple,netflix,prime,hbo` | Comma-separated service codes.   |
+| `FEED_SERVICES`                  | `apple,netflix,prime,hbo` | Comma-separated service codes (seed only). |
 | `FEED_LIMIT`                     | `10`    | Items per Top list.                               |
-| `SEERR_URL` / `SEERR_API_KEY`    | —       | Overseerr / Jellyseerr instance.                  |
-| `RADARR_URL` / `RADARR_API_KEY`  | —       | Radarr backend (movie status).                    |
-| `SONARR_URL` / `SONARR_API_KEY`  | —       | Sonarr backend (TV status).                       |
+| `REQUEST_PROVIDER`               | `arr`   | `arr` = Radarr/Sonarr direct (default), or `seerr`. |
+| `SEERR_URL` / `SEERR_API_KEY`    | —       | Seerr instance (only if `REQUEST_PROVIDER=seerr`). |
+| `RADARR_URL` / `RADARR_API_KEY`  | —       | Radarr backend (movie requests + status).         |
+| `SONARR_URL` / `SONARR_API_KEY`  | —       | Sonarr backend (TV requests + status).            |
 | `PORT`                           | `9797`  | Web GUI port.                                     |
 | `LOG_DIR`                        | `logs`  | Directory for log files.                          |
 
