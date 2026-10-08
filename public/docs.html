@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>toprr — Documentation and API</title>
+<link rel="icon" href="/favicon.ico" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css" />
+<style>
+  body { margin:0; background:#0e1014; font:14px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; color:#e8ebf2; }
+  .topbar-wrap { display:flex; align-items:center; gap:12px; padding:14px 20px; border-bottom:1px solid #242a36; background:#161922; }
+  .topbar-wrap img { height:26px; }
+  .topbar-wrap a { color:#e8ebf2; text-decoration:none; font-size:13px; font-weight:600; margin-left:auto; }
+  .topbar-wrap a:hover { color:#7aa2ff; }
+  /* Compact "Documentation & help" intro — sits above Swagger, kept short so
+     the interactive API section stays visible without excessive scrolling. */
+  .help {
+    color:#e8ebf2; font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    max-width:980px; margin:0 auto; padding:22px 20px 6px;
+  }
+  .help h1 { font-size:20px; margin:0 0 6px; }
+  .help p { margin:0 0 12px; color:#b7bfd0; }
+  .help .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin:0 0 14px; }
+  .help .card { background:#161922; border:1px solid #242a36; border-radius:11px; padding:12px 14px; }
+  .help .card h3 { font-size:13px; margin:0 0 6px; color:#e8ebf2; }
+  .help .card p { font-size:13px; margin:0; color:#8b94a6; }
+  .help code { background:#1d212c; padding:1px 6px; border-radius:5px; font-size:12px; color:#e8ebf2; }
+  .help .api-head { font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:#8b94a6; font-weight:700; border-top:1px solid #242a36; padding-top:14px; margin:6px 0 0; }
+  /* Dark-ish Swagger UI tweaks */
+  .swagger-ui .topbar { display:none; }
+</style>
+</head>
+<body>
+<div class="topbar-wrap">
+  <img src="/logo.png" alt="toprr" />
+  <a href="/">← Back to toprr</a>
+</div>
+
+<section class="help">
+  <h1>Documentation and API</h1>
+  <p>toprr fetches the daily Top 10 from your streaming services and requests genuinely new
+     titles via Radarr / Sonarr (Seerr optional). Configure everything in the GUI; the HTTP API
+     below is for automation and scripts.</p>
+  <div class="cards">
+    <div class="card">
+      <h3>Getting started</h3>
+      <p>In the GUI: set your Streaming Availability key in <b>Settings</b>, pick country and
+         services on the <b>Dashboard</b>, then <b>Check for new titles</b> and submit.</p>
+    </div>
+    <div class="card">
+      <h3>Authentication</h3>
+      <p>Every endpoint (except auth) needs a session cookie <i>or</i> an API key sent as
+         <code>X-Api-Key</code>. Generate a key under <b>Settings → Account &amp; API access</b>.</p>
+    </div>
+    <div class="card">
+      <h3>Running a sync</h3>
+      <p><code>POST /api/sync</code> with <code>{"submit":false}</code> for a dry run, or
+         <code>{"submit":true}</code> to request. Browser calls also send
+         <code>X-Requested-With: toprr</code>.</p>
+    </div>
+  </div>
+  <p class="api-head">Interactive API reference</p>
+</section>
+
+<div id="swagger"></div>
+<script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<script>
+  window.ui = SwaggerUIBundle({
+    url: "/openapi.json",
+    dom_id: "#swagger",
+    deepLinking: true,
+    presets: [SwaggerUIBundle.presets.apis],
+    layout: "BaseLayout",
+  });
+</script>
+</body>
+</html>

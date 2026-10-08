@@ -1,0 +1,40 @@
+{
+  "name": "toprr",
+  "version": "1.0.0",
+  "description": "Fetches the daily Top 10 movies and TV shows from Apple TV, Netflix, Amazon Prime and HBO Max (Max) via the Streaming Availability API. Text-only feed for downstream services.",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "tsx --test src/*.test.ts",
+    "start": "node dist/index.js",
+    "feed": "tsx src/index.ts",
+    "feed:json": "tsx src/index.ts --json",
+    "feed:list": "tsx src/index.ts --list",
+    "feed:list:json": "tsx src/index.ts --list --json",
+    "sync": "tsx src/index.ts --sync",
+    "sync:submit": "tsx src/index.ts --sync --submit",
+    "web": "tsx src/server.ts",
+    "web:build": "node dist/server.js",
+    "serve": "node dist/server.js"
+  },
+  "keywords": [
+    "streaming",
+    "top10",
+    "netflix",
+    "prime",
+    "apple-tv",
+    "hbo-max",
+    "feed"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "16.4.7",
+    "streaming-availability": "4.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.5",
+    "tsx": "4.19.2",
+    "typescript": "5.7.3"
+  }
+}

@@ -1,0 +1,240 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "toprr API",
+    "version": "1.0.0",
+    "description": "HTTP API for **toprr** — fetches the daily Top 10 movies & TV shows from your chosen streaming services and requests genuinely new titles via Radarr/Sonarr (or Overseerr/Jellyseerr).\n\n## Authentication\n\nEvery endpoint except the public auth endpoints requires authentication by **either**:\n\n- **Session cookie** — obtained by logging in through the web GUI (`POST /api/auth/login`). Browser mutating requests must also send the header `X-Requested-With: toprr` (CSRF protection).\n- **API key** — send the header `X-Api-Key: <key>`. Generate one in **Settings → Account & API access**. API-key requests are exempt from the CSRF header requirement.\n\nSecrets are never returned by the API; keys are shown only as a masked hint (`••••1234`).",
+    "contact": { "name": "toprr", "url": "https://www.movieofthenight.com/about/api" },
+    "license": { "name": "MIT" }
+  },
+  "servers": [
+    { "url": "/", "description": "This instance" }
+  ],
+  "tags": [
+    { "name": "Auth", "description": "Account setup, login, API key management" },
+    { "name": "Config", "description": "Application settings (secrets masked)" },
+    { "name": "Feed", "description": "The deduplicated Top 10 feeding list" },
+    { "name": "Sync", "description": "Plan and submit requests" },
+    { "name": "History", "description": "Request history and live library status" },
+    { "name": "Discovery", "description": "Countries, services, backend options, connection tests" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKey": { "type": "apiKey", "in": "header", "name": "X-Api-Key" },
+      "SessionCookie": { "type": "apiKey", "in": "cookie", "name": "toprr_session" }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": { "error": { "type": "string", "example": "Authentication required" } }
+      },
+      "MaskedSecret": {
+        "type": "object",
+        "properties": {
+          "set": { "type": "boolean" },
+          "hint": { "type": "string", "example": "••••aO3C" }
+        }
+      },
+      "AuthStatus": {
+        "type": "object",
+        "properties": {
+          "needsSetup": { "type": "boolean", "description": "True before an admin account exists." },
+          "authenticated": { "type": "boolean" },
+          "username": { "type": "string", "nullable": true }
+        }
+      },
+      "PublicConfig": {
+        "type": "object",
+        "properties": {
+          "country": { "type": "string", "example": "us" },
+          "services": { "type": "array", "items": { "type": "string" }, "example": ["apple", "netflix", "prime", "hbo"] },
+          "limit": { "type": "integer", "example": 10 },
+          "requestProvider": { "type": "string", "enum": ["arr", "seerr"] },
+          "apiKey": { "$ref": "#/components/schemas/MaskedSecret" },
+          "tmdbApiKey": { "$ref": "#/components/schemas/MaskedSecret" },
+          "seerr": { "type": "object", "properties": { "url": { "type": "string" }, "apiKey": { "$ref": "#/components/schemas/MaskedSecret" } } },
+          "radarr": { "type": "object", "properties": { "url": { "type": "string" }, "apiKey": { "$ref": "#/components/schemas/MaskedSecret" }, "qualityProfileId": { "type": "integer", "nullable": true }, "rootFolder": { "type": "string", "nullable": true } } },
+          "sonarr": { "type": "object", "properties": { "url": { "type": "string" }, "apiKey": { "$ref": "#/components/schemas/MaskedSecret" }, "qualityProfileId": { "type": "integer", "nullable": true }, "rootFolder": { "type": "string", "nullable": true } } },
+          "auth": { "type": "object", "properties": { "username": { "type": "string" }, "apiKeySet": { "type": "boolean" } } }
+        }
+      },
+      "ConfigUpdate": {
+        "type": "object",
+        "description": "Partial update. Blank secret fields are preserved (not overwritten).",
+        "properties": {
+          "apiKey": { "type": "string" },
+          "tmdbApiKey": { "type": "string" },
+          "country": { "type": "string" },
+          "services": { "type": "array", "items": { "type": "string" } },
+          "limit": { "type": "integer" },
+          "requestProvider": { "type": "string", "enum": ["arr", "seerr"] },
+          "seerr": { "type": "object", "properties": { "url": { "type": "string" }, "apiKey": { "type": "string" } } },
+          "radarr": { "type": "object", "properties": { "url": { "type": "string" }, "apiKey": { "type": "string" }, "qualityProfileId": { "type": "integer" }, "rootFolder": { "type": "string" } } },
+          "sonarr": { "type": "object", "properties": { "url": { "type": "string" }, "apiKey": { "type": "string" }, "qualityProfileId": { "type": "integer" }, "rootFolder": { "type": "string" } } }
+        }
+      },
+      "FeedEntry": {
+        "type": "object",
+        "description": "A deduplicated title in the feeding list.",
+        "properties": {
+          "mediaType": { "type": "string", "enum": ["movie", "tv"] },
+          "tmdbId": { "type": "integer", "nullable": true },
+          "imdbId": { "type": "string", "nullable": true },
+          "title": { "type": "string" },
+          "year": { "type": "integer", "nullable": true },
+          "rating": { "type": "number", "description": "Streaming Availability score 0–100", "nullable": true },
+          "genres": { "type": "array", "items": { "type": "string" } },
+          "services": { "type": "array", "items": { "type": "string" } },
+          "bestRank": { "type": "integer" }
+        }
+      },
+      "SyncRequest": {
+        "type": "object",
+        "properties": {
+          "submit": { "type": "boolean", "default": false, "description": "false = dry run (plan only); true = actually request." },
+          "only": { "type": "array", "items": { "type": "string" }, "description": "Entry keys ('<mediaType>:<tmdbId>') to request. Empty array = request nothing. Omitted = request all new titles." },
+          "seasonsByKey": { "type": "object", "additionalProperties": { "oneOf": [ { "type": "string", "enum": ["all"] }, { "type": "array", "items": { "type": "integer" } } ] }, "description": "Per-TV-title season selection keyed by entry key. Defaults to [1]." }
+        }
+      },
+      "SyncResult": {
+        "type": "object",
+        "properties": {
+          "dryRun": { "type": "boolean" },
+          "uniqueCount": { "type": "integer" },
+          "skippedExisting": { "type": "integer" },
+          "plan": { "type": "array", "items": { "$ref": "#/components/schemas/FeedEntry" } },
+          "requested": { "type": "integer" },
+          "failed": { "type": "array", "items": { "type": "object" } },
+          "posterSource": { "type": "string", "enum": ["tmdb", "none"] }
+        }
+      },
+      "TitleStatus": {
+        "type": "object",
+        "description": "Live library status. Never includes file sizes or paths.",
+        "properties": {
+          "inLibrary": { "type": "boolean" },
+          "monitored": { "type": "boolean" },
+          "hasFile": { "type": "boolean" },
+          "percentComplete": { "type": "integer" },
+          "upToDate": { "type": "boolean" },
+          "downloading": { "type": "boolean" },
+          "downloadProgress": { "type": "integer" }
+        }
+      },
+      "TestConnectionRequest": {
+        "type": "object",
+        "required": ["kind"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["streaming", "tmdb", "radarr", "sonarr", "seerr"] },
+          "url": { "type": "string", "description": "Required for radarr/sonarr/seerr." },
+          "apiKey": { "type": "string", "description": "Blank falls back to the stored key." }
+        }
+      },
+      "TestConnectionResult": {
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "message": { "type": "string" },
+          "profiles": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "integer" }, "name": { "type": "string" } } } },
+          "rootFolders": { "type": "array", "items": { "type": "object", "properties": { "path": { "type": "string" } } } }
+        }
+      }
+    }
+  },
+  "security": [ { "ApiKey": [] }, { "SessionCookie": [] } ],
+  "paths": {
+    "/api/auth/status": {
+      "get": {
+        "tags": ["Auth"], "summary": "Setup / login state", "security": [],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthStatus" } } } } }
+      }
+    },
+    "/api/auth/setup": {
+      "post": {
+        "tags": ["Auth"], "summary": "Create the admin account (first run only)", "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["username", "password"], "properties": { "username": { "type": "string", "minLength": 3 }, "password": { "type": "string", "minLength": 8 } } } } } },
+        "responses": { "200": { "description": "Account created; session cookie set." }, "400": { "description": "Validation failed" }, "409": { "description": "Setup already completed" } }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"], "summary": "Log in (rate-limited: 5 failures / 15 min)", "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "username": { "type": "string" }, "password": { "type": "string" } } } } } },
+        "responses": { "200": { "description": "Session cookie set." }, "401": { "description": "Invalid credentials" }, "429": { "description": "Too many attempts" } }
+      }
+    },
+    "/api/auth/logout": {
+      "post": { "tags": ["Auth"], "summary": "Destroy the current session", "security": [], "responses": { "200": { "description": "Logged out" } } }
+    },
+    "/api/auth/password": {
+      "post": {
+        "tags": ["Auth"], "summary": "Change password (invalidates all sessions)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "currentPassword": { "type": "string" }, "newPassword": { "type": "string", "minLength": 8 } } } } } },
+        "responses": { "200": { "description": "Changed" }, "401": { "description": "Current password incorrect" } }
+      }
+    },
+    "/api/auth/username": {
+      "post": {
+        "tags": ["Auth"], "summary": "Change username",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "username": { "type": "string", "minLength": 3 } } } } } },
+        "responses": { "200": { "description": "Changed" } }
+      }
+    },
+    "/api/auth/apikey": {
+      "post": { "tags": ["Auth"], "summary": "Generate / rotate the API key (returned once)", "responses": { "200": { "description": "New key", "content": { "application/json": { "schema": { "type": "object", "properties": { "apiKey": { "type": "string" } } } } } } } },
+      "delete": { "tags": ["Auth"], "summary": "Revoke the API key", "responses": { "200": { "description": "Revoked" } } }
+    },
+    "/api/config": {
+      "get": { "tags": ["Config"], "summary": "Current settings (secrets masked)", "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PublicConfig" } } } }, "401": { "description": "Unauthenticated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } } } },
+      "patch": { "tags": ["Config"], "summary": "Update settings (blank secrets preserved)", "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConfigUpdate" } } } }, "responses": { "200": { "description": "Updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PublicConfig" } } } } } }
+    },
+    "/api/status": {
+      "get": {
+        "tags": ["Config"], "summary": "Backend health, provider, configured flags, history summary",
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "requestProvider": { "type": "string" }, "requestReady": { "type": "boolean" }, "configured": { "type": "object" }, "country": { "type": "string" }, "services": { "type": "array", "items": { "type": "string" } }, "backends": { "type": "object" }, "history": { "type": "object" } } } } } } }
+      }
+    },
+    "/api/countries": {
+      "get": { "tags": ["Discovery"], "summary": "Countries + services your Streaming key supports", "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "countries": { "type": "array", "items": { "type": "object", "properties": { "code": { "type": "string" }, "name": { "type": "string" }, "services": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "logo": { "type": "string", "nullable": true } } } } } } } } } } } } } }
+    },
+    "/api/arr-options": {
+      "get": { "tags": ["Discovery"], "summary": "Radarr/Sonarr quality profiles + root folders", "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "radarr": { "type": "object", "nullable": true }, "sonarr": { "type": "object", "nullable": true } } } } } } } }
+    },
+    "/api/test-connection": {
+      "post": {
+        "tags": ["Discovery"], "summary": "Verify a URL + API key is reachable and valid",
+        "description": "Allowed without auth only during first-run setup; otherwise requires auth. For radarr/sonarr it also returns quality profiles and root folders.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TestConnectionRequest" } } } },
+        "responses": { "200": { "description": "Result (check the `ok` field)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TestConnectionResult" } } } } }
+      }
+    },
+    "/api/feed": {
+      "get": { "tags": ["Feed"], "summary": "Current deduplicated feeding list", "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "entries": { "type": "array", "items": { "$ref": "#/components/schemas/FeedEntry" } } } } } } } } }
+    },
+    "/api/sync": {
+      "post": {
+        "tags": ["Sync"], "summary": "Plan (dry run) or submit requests",
+        "description": "With `submit:false` (default) returns the plan of new titles without requesting anything. With `submit:true` requests the selected titles via the configured provider.",
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SyncRequest" } } } },
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SyncResult" } } } }, "502": { "description": "Provider error" } }
+      }
+    },
+    "/api/history": {
+      "get": {
+        "tags": ["History"], "summary": "Paginated request history (+ live status when status=true)",
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 25, "maximum": 100 } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer", "default": 0 } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["true", "false"], "default": "true" }, "description": "false = return records instantly without resolving live library status/posters." }
+        ],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "records": { "type": "array", "items": { "type": "object" } }, "total": { "type": "integer" }, "limit": { "type": "integer" }, "offset": { "type": "integer" } } } } } } }
+      }
+    },
+    "/api/history/retry": {
+      "post": { "tags": ["History"], "summary": "Re-submit a failed history item", "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "id": { "type": "string" } } } } } }, "responses": { "200": { "description": "Retried OK" }, "404": { "description": "Not found" }, "502": { "description": "Retry failed" } } }
+    },
+    "/api/history/remove": {
+      "post": { "tags": ["History"], "summary": "Delete a history item (local record only)", "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "id": { "type": "string" } } } } } }, "responses": { "200": { "description": "Removed" }, "404": { "description": "Not found" } } }
+    }
+  }
+}

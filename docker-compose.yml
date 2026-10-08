@@ -1,0 +1,32 @@
+services:
+  toprr:
+    build: .
+    # Or use a published image once you push one to your registry:
+    # image: registry.gitlab.com/<you>/toprr:latest
+    container_name: toprr
+    restart: unless-stopped
+    # Bind to localhost only; terminate TLS and expose via your reverse proxy.
+    ports:
+      - "127.0.0.1:9797:9797"
+    environment:
+      PORT: "9797"
+      LOG_DIR: /app/logs
+      # Optional: seed initial config on first run (otherwise set via the GUI).
+      # Everything here is OPTIONAL — the app can be fully configured in Settings.
+      # STREAMING_AVAILABILITY_API_KEY: ""
+      # TMDB_API_KEY: ""
+      # FEED_COUNTRY: "us"
+    volumes:
+      # Persist config (incl. credential hashes) and logs across restarts.
+      - toprr-data:/app/data
+      - toprr-logs:/app/logs
+    # Treat the container filesystem as read-only except the mounted volumes.
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  toprr-data:
+  toprr-logs:

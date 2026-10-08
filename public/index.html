@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>toprr</title>
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#0e1014" />
+<style>
+  :root {
+    --bg:#0e1014; --panel:#161922; --panel2:#1d212c; --fg:#e8ebf2; --muted:#8b94a6;
+    --accent:#5b8cff; --accent2:#7aa2ff; --ok:#3ecf8e; --warn:#f5b23e; --err:#ff5c6c;
+    --border:#242a36; --shadow:0 1px 3px rgba(0,0,0,.3);
+  }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body {
+    margin:0; font:14px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    background:radial-gradient(1200px 600px at 70% -10%, #1a2030 0%, var(--bg) 55%); color:var(--fg); min-height:100vh;
+  }
+  header {
+    display:flex; align-items:center; gap:14px; padding:18px 28px; border-bottom:1px solid var(--border);
+    position:sticky; top:0; backdrop-filter:blur(8px); background:rgba(14,16,20,.72); z-index:10;
+  }
+  .logo { width:32px; height:32px; border-radius:8px; display:block; object-fit:contain; }
+  header .brand { height:30px; width:auto; display:block; }
+  header .sub { color:var(--muted); font-size:12px; align-self:center; }
+  nav.tabs { margin-left:auto; display:flex; gap:4px; align-items:center; }
+  nav.tabs button, nav.tabs a { background:transparent; border:1px solid transparent; color:var(--muted); padding:8px 16px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-family:inherit; }
+  nav.tabs button.active, nav.tabs a.active { background:var(--panel2); color:var(--fg); border-color:var(--border); }
+  nav.tabs button:hover, nav.tabs a:hover { color:var(--fg); }
+  nav.tabs .nav-ext::after { content:"↗"; font-size:11px; opacity:.6; }
+  /* Hamburger toggle — hidden on desktop, shown on mobile. */
+  .navToggle { display:none; flex-direction:column; justify-content:center; gap:4px; width:40px; height:40px; padding:0; border:1px solid var(--border); border-radius:9px; background:var(--panel2); cursor:pointer; flex:none; }
+  .navToggle span { display:block; width:18px; height:2px; margin:0 auto; background:var(--fg); border-radius:2px; transition:transform .2s, opacity .2s; }
+  .navToggle[aria-expanded="true"] span:nth-child(1) { transform:translateY(6px) rotate(45deg); }
+  .navToggle[aria-expanded="true"] span:nth-child(2) { opacity:0; }
+  .navToggle[aria-expanded="true"] span:nth-child(3) { transform:translateY(-6px) rotate(-45deg); }
+  .nav-scrim { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:30; }
+  main { max-width:1120px; margin:0 auto; padding:26px 20px 60px; }
+  .tabpage { display:none; }
+  .tabpage.active { display:grid; gap:22px; }
+  .panel { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:22px; box-shadow:var(--shadow); }
+  .panel h2 { margin:0 0 4px; font-size:15px; letter-spacing:-.01em; }
+  .panel .desc { color:var(--muted); font-size:13px; margin:0 0 16px; }
+  .row { display:flex; flex-wrap:wrap; gap:12px; }
+  .panel-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px; }
+  .panel-head .desc { margin:0; }
+  /* Stat cards: a clean responsive grid with an accent top-rule. */
+  .statgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; }
+  .statgrid .stat { position:relative; overflow:hidden; }
+  .statgrid .stat::before { content:""; position:absolute; inset:0 0 auto 0; height:3px; background:linear-gradient(90deg,var(--accent),#9b6bff); opacity:.8; }
+  /* Connections strip: labeled row of backend pills, visually distinct. */
+  .connections { display:flex; align-items:center; gap:14px; margin-top:16px; padding:12px 16px; background:var(--panel2); border:1px solid var(--border); border-radius:11px; flex-wrap:wrap; }
+  .conn-label { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700; }
+  .conn-pills { display:flex; gap:8px; flex-wrap:wrap; }
+  /* API quota meter — subtle strip matching the connections row. */
+  .quota { margin-top:12px; padding:12px 16px; background:var(--panel2); border:1px solid var(--border); border-radius:11px; }
+  .quota-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:8px; flex-wrap:wrap; }
+  .quota-nums { font-size:13px; }
+  .quota-bar { height:6px; background:rgba(255,255,255,.06); border-radius:4px; overflow:hidden; }
+  .quota-fill { display:block; height:100%; border-radius:4px; transition:width .3s; }
+  .quota-fill.ok { background:linear-gradient(90deg,var(--accent),#9b6bff); }
+  .quota-fill.warn { background:var(--warn); }
+  .quota-fill.err { background:var(--err); }
+  .action-bar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:18px; padding-top:18px; border-top:1px solid var(--border); }
+  .stat { background:var(--panel2); border:1px solid var(--border); border-radius:11px; padding:14px 18px; min-width:120px; flex:1; }
+  .stat .label { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+  .stat .value { font-size:23px; font-weight:700; margin-top:3px; }
+  .pill { display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600; white-space:nowrap; }
+  .pill.ok { background:rgba(62,207,142,.14); color:var(--ok); }
+  .pill.err { background:rgba(255,92,108,.14); color:var(--err); }
+  .pill.warn { background:rgba(245,178,62,.14); color:var(--warn); }
+  .pill.muted { background:var(--panel2); color:var(--muted); }
+  /* Media-type badge: subtle dark pill with a blue-tinted icon + label. */
+  .typebadge {
+    display:inline-flex; align-items:center; gap:6px; padding:4px 10px 4px 8px;
+    border-radius:999px; font-size:12px; font-weight:600; letter-spacing:.01em;
+    background:linear-gradient(135deg, rgba(91,140,255,.12), rgba(155,107,255,.10));
+    border:1px solid var(--border); color:var(--fg);
+  }
+  .typebadge svg { width:14px; height:14px; fill:none; stroke:var(--accent2); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .typebadge.tv svg { stroke:var(--accent2); }
+  .typebadge.movie svg { stroke:#8fb0ff; }
+  .typebadge:hover { border-color:var(--accent); }
+  label { display:block; font-size:13px; color:var(--muted); margin-bottom:6px; }
+  input, select { width:100%; padding:9px 11px; border-radius:9px; border:1px solid var(--border); background:var(--panel2); color:var(--fg); font-size:14px; }
+  input:focus, select:focus { outline:none; border-color:var(--accent); }
+  .field { margin-bottom:16px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:620px){ .grid2 { grid-template-columns:1fr; } }
+  .services { display:flex; flex-wrap:wrap; gap:10px; }
+  .save-note { margin-top:12px; font-size:12px; }
+  .verify-msg { font-size:12px; }
+  .verify-msg.ok { color:var(--ok); }
+  .verify-msg.err { color:var(--err); }
+  .req-fail { display:inline-flex; flex-direction:column; gap:6px; align-items:flex-start; }
+  .failbtn { cursor:pointer; border:none; }
+  .fail-actions { display:flex; gap:6px; }
+  .chip { padding:7px 13px; border-radius:999px; border:1px solid var(--border); background:var(--panel2); cursor:pointer; font-size:13px; user-select:none; transition:.14s; }
+  .chip:hover { border-color:var(--accent); }
+  .chip.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button { padding:10px 16px; border-radius:9px; border:1px solid var(--border); background:var(--panel2); color:var(--fg); cursor:pointer; font-size:14px; font-weight:600; transition:.12s; }
+  button:hover:not(:disabled){ border-color:var(--accent); }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button.primary:hover:not(:disabled){ background:var(--accent2); }
+  button.danger { background:var(--err); border-color:var(--err); color:#fff; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .btnrow { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:6px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:9px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  thead th { color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+  th.sortable { cursor:pointer; user-select:none; white-space:nowrap; }
+  th.sortable:hover { color:var(--fg); }
+  th .arrow { opacity:.4; font-size:10px; }
+  th.sorted .arrow { opacity:1; color:var(--accent); }
+  tbody tr:hover { background:rgba(91,140,255,.05); }
+  .poster { width:40px; height:60px; object-fit:cover; border-radius:4px; display:block; background:var(--panel2); }
+  .poster-ph { display:flex; align-items:center; justify-content:center; font-size:17px; color:var(--muted); border:1px solid var(--border); }
+  .title-link { color:var(--fg); text-decoration:none; font-weight:600; }
+  .title-link:hover { color:var(--accent2); text-decoration:underline; }
+  .bar { height:5px; background:var(--panel2); border-radius:4px; overflow:hidden; width:70px; margin-top:3px; }
+  .bar > span { display:block; height:100%; background:var(--ok); }
+  .bar > span.bar-dl { background:var(--accent); }
+  .pill.dl { background:rgba(91,140,255,.15); color:var(--accent2); }
+  @keyframes dlpulse { 0%,100%{opacity:1} 50%{opacity:.55} }
+  .pill.dl { animation:dlpulse 1.6s ease-in-out infinite; }
+  /* Elegant custom checkbox (plan select + select-all). */
+  .chk { display:inline-flex; align-items:center; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .chk input { position:absolute; opacity:0; width:0; height:0; }
+  .chk-box {
+    width:20px; height:20px; border-radius:6px; border:2px solid var(--border);
+    background:var(--panel2); display:inline-flex; align-items:center; justify-content:center;
+    transition:background .15s, border-color .15s, transform .1s; position:relative;
+  }
+  .chk:hover .chk-box { border-color:var(--accent); }
+  .chk input:focus-visible + .chk-box { box-shadow:0 0 0 3px rgba(91,140,255,.35); }
+  .chk-box::after {
+    content:""; width:5px; height:9px; border:solid #fff; border-width:0 2.5px 2.5px 0;
+    transform:rotate(45deg) scale(0); transition:transform .15s cubic-bezier(.2,.8,.3,1.4); margin-top:-1px;
+  }
+  .chk input:checked + .chk-box { background:linear-gradient(135deg,var(--accent),#9b6bff); border-color:transparent; }
+  .chk input:checked + .chk-box::after { transform:rotate(45deg) scale(1); }
+  .chk input:active + .chk-box { transform:scale(.9); }
+  /* Indeterminate (some-but-not-all selected) for the select-all box. */
+  .chk-box.indet { background:var(--accent); border-color:transparent; }
+  .chk-box.indet::after { content:""; width:9px; height:0; border:solid #fff; border-width:0 0 2.5px 0; transform:none; margin:0; }
+  .toast { position:fixed; bottom:22px; right:22px; background:var(--panel2); border:1px solid var(--border); padding:12px 16px; border-radius:10px; opacity:0; transform:translateY(8px); transition:.2s; box-shadow:var(--shadow); }
+  .toast.show { opacity:1; transform:translateY(0); }
+  .muted { color:var(--muted); }
+  .hint { font-size:12px; color:var(--muted); margin-top:4px; }
+  /* ---- Spinner (ora-style braille dots, ported to the browser) ----
+     The glyph cycles through ora's 10 frames (driven by JS for cross-browser
+     reliability); the mark swaps to a green ✓ / red ✗ on succeed()/fail().
+     Used wherever we previously showed "Loading…". */
+  .spinner { display:inline-flex; align-items:center; gap:10px; color:var(--muted); font-size:14px; }
+  .spinner .spin-glyph {
+    min-width:1.1em; display:inline-flex; align-items:center; justify-content:center;
+    font-size:1.2em; line-height:1; color:var(--accent2);
+  }
+  .spinner.ok    .spin-glyph { color:var(--ok); }
+  .spinner.fail  .spin-glyph { color:var(--err); }
+  .spinner.ok   .spin-text { color:var(--fg); }
+  .spinner.fail .spin-text { color:var(--err); }
+  /* Centered block variant for full-panel / page loading states. */
+  .spinner-center { display:flex; align-items:center; justify-content:center; min-height:120px; width:100%; }
+  .spinner-center .spinner { font-size:15px; }
+  table.data thead th { background:var(--panel); }
+  .yr-inline { display:none; }
+  /* Mobile sort bar — hidden on desktop (headers handle sorting there). */
+  .sortbar { display:none; gap:8px; align-items:flex-end; margin-bottom:12px; }
+  .sortbar .sort-field { flex:1; }
+  .sortbar label { margin-bottom:4px; }
+  .sortbar .sort-dir { flex:none; width:46px; height:44px; display:flex; align-items:center; justify-content:center; font-size:15px; padding:0; }
+  /* Requests controls: search + "Show N" page size, and the pager row. */
+  .hist-controls { display:flex; align-items:flex-end; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+  .hist-search { flex:1; min-width:180px; }
+  .hist-search input { width:100%; }
+  .hist-pagesize { display:flex; align-items:center; gap:8px; margin:0; color:var(--muted); font-size:13px; white-space:nowrap; }
+  .hist-pagesize select { width:auto; padding:8px 10px; }
+  .hist-pager { display:flex; align-items:center; gap:12px; margin-top:14px; flex-wrap:wrap; }
+  .hist-pager .muted { font-size:13px; }
+  /* About page */
+  .about-hero { text-align:center; }
+  .about-logo { height:40px; width:auto; display:block; margin:4px auto 12px; }
+  .about-hero .statgrid { max-width:520px; margin:14px auto 0; }
+  .changelog .cl-entry { padding:12px 0; border-top:1px solid var(--border); }
+  .changelog .cl-entry:first-child { border-top:none; padding-top:0; }
+  .changelog .cl-ver { font-weight:700; font-size:14px; }
+  .changelog .cl-date { color:var(--muted); font-size:12px; margin-left:8px; }
+  .changelog ul { margin:8px 0 0; padding-left:18px; }
+  .changelog li { margin:3px 0; }
+  .lang { text-transform:uppercase; font-size:12px; letter-spacing:.03em; }
+  .svc-list { display:inline-flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .svc-logo { height:18px; width:auto; max-width:62px; object-fit:contain; vertical-align:middle; border-radius:3px; }
+  .svc-text { font-size:12px; color:var(--muted); }
+  .chip-svc { display:inline-flex; align-items:center; gap:9px; padding:8px 15px; }
+  .chip-svc .svc-logo { height:20px; opacity:.85; transition:opacity .14s; }
+  .chip-svc:hover .svc-logo { opacity:1; }
+  .chip-svc.on { background:rgba(91,140,255,.14); border-color:var(--accent); box-shadow:0 0 0 1px rgba(91,140,255,.3) inset, 0 2px 10px rgba(91,140,255,.12); }
+  .chip-svc.on .svc-logo { opacity:1; }
+  .chip-svc span { font-size:13px; }
+  .seasons-ctl { position:relative; }
+  .seasontoggle { padding:4px 10px; font-size:12px; border-radius:7px; background:var(--panel2); border:1px solid var(--border); color:var(--fg); cursor:pointer; font-weight:600; white-space:nowrap; }
+  .seasontoggle:hover { border-color:var(--accent); }
+  .mini { padding:4px 10px; font-size:12px; border-radius:7px; background:var(--panel2); border:1px solid var(--border); color:var(--muted); cursor:pointer; font-weight:600; }
+  .mini:hover { color:var(--fg); border-color:var(--accent); }
+
+  /* Season picker modal — click-outside / ✕ / Esc / Done to close; no scroll. */
+  .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; z-index:100; padding:20px; }
+  .modal { background:var(--panel); border:1px solid var(--border); border-radius:16px; box-shadow:0 12px 40px rgba(0,0,0,.5); width:min(460px,100%); padding:18px; }
+  .modal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:12px; }
+  .modal-head strong { font-size:15px; }
+  .modal-x { background:var(--panel2); border:1px solid var(--border); color:var(--muted); border-radius:8px; width:30px; height:30px; cursor:pointer; font-size:14px; line-height:1; flex:none; }
+  .modal-x:hover { color:var(--fg); border-color:var(--accent); }
+  .modal-row { display:flex; gap:8px; margin-bottom:14px; }
+  .seasongrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); gap:8px; }
+  .seasonbox { display:flex; align-items:center; gap:6px; padding:9px 10px; font-size:13px; cursor:pointer; border:1px solid var(--border); border-radius:9px; background:var(--panel2); user-select:none; }
+  .seasonbox.on { border-color:var(--accent); background:rgba(91,140,255,.12); }
+  .seasonbox .sn { font-weight:600; }
+  .seasonbox .ep { font-size:11px; }
+  .modal-foot { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:16px; }
+  .sm-modal { width:min(520px,100%); }
+  .sm-list { list-style:none; margin:0 0 12px; padding:0; max-height:230px; overflow:auto; display:flex; flex-direction:column; gap:7px; }
+  .sm-list li { display:flex; align-items:center; gap:8px; font-size:13px; }
+  .sm-advanced { border-top:1px solid var(--border); padding-top:12px; }
+  .sm-advanced summary { cursor:pointer; font-size:13px; color:var(--muted); font-weight:600; }
+  .sm-advanced summary:hover { color:var(--fg); }
+  .sm-arr { margin-top:12px; }
+  .sm-arr-head { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin-bottom:6px; font-weight:700; }
+  .sm-modal label { display:block; font-size:12px; color:var(--muted); margin:8px 0 5px; }
+  .sm-modal select { width:100%; padding:9px 11px; border-radius:9px; border:1px solid var(--border); background:var(--panel2); color:var(--fg); font-size:14px; }
+  /* Details modal */
+  .dt-modal { width:min(560px,100%); position:relative; }
+  .dt-x { position:absolute; top:14px; right:14px; }
+  .dt-top { display:flex; gap:16px; }
+  .dt-poster { flex:none; width:110px; }
+  .dt-poster img, .dt-poster .poster { width:110px; height:165px; object-fit:cover; border-radius:10px; background:var(--panel2); display:flex; align-items:center; justify-content:center; font-size:30px; }
+  .dt-head { flex:1; min-width:0; padding-right:28px; }
+  .dt-head h2 { margin:0 0 4px; font-size:19px; }
+  .dt-orig { font-size:13px; margin:0 0 8px; }
+  .dt-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .dt-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .dt-genre { font-size:11px; padding:3px 9px; border-radius:999px; background:var(--panel2); border:1px solid var(--border); color:var(--muted); }
+  .dt-services { margin-top:4px; }
+  .dt-overview { font-size:14px; line-height:1.6; margin:16px 0 12px; color:var(--fg); }
+  .dt-row { display:flex; gap:10px; font-size:13px; padding:5px 0; border-top:1px solid var(--border); }
+  .dt-row > span { color:var(--muted); min-width:70px; flex:none; }
+  .dt-links { display:flex; gap:10px; margin-top:16px; }
+  .dt-link { padding:8px 14px; border-radius:9px; border:1px solid var(--border); color:var(--accent2); text-decoration:none; font-size:13px; font-weight:600; }
+  .dt-link:hover { border-color:var(--accent); }
+  .detail-open { cursor:pointer; }
+  .detail-open:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+
+  /* Mobile: reflow the plan/history tables into cards (no horizontal scroll). */
+  @media (max-width:720px) {
+    main { padding:16px 12px 48px; }
+    table.data, table.data tbody { display:block; }
+    table.data thead { display:none; }
+    table.data tr {
+      display:block; position:relative;
+      background:var(--panel2); border:1px solid var(--border); border-radius:12px;
+      padding:12px 12px 12px 92px; margin-bottom:10px; min-height:120px;
+    }
+    /* Plan rows carry a checkbox — reserve a right gutter so it never overlaps. */
+    table.data.plan tr { padding-right:48px; }
+    table.data td { display:flex; justify-content:space-between; gap:12px; border:none; padding:4px 0; font-size:13px; }
+    /* Checkbox pinned in its own reserved right gutter (card reserves 48px on
+       the right via padding) so it can never overlap the title or inline year. */
+    td.c-pick { position:absolute; top:12px; right:12px; padding:0; width:20px; }
+    /* Poster pinned left. */
+    td.c-poster { position:absolute; top:12px; left:12px; padding:0; }
+    td.c-poster .poster { width:68px; height:102px; }
+    table.data tr.no-poster { padding-left:12px; min-height:0; }
+    td.c-title { font-size:15px; font-weight:600; padding-right:0; margin-bottom:4px; }
+    .yr-inline { display:inline; font-weight:400; }
+    /* Labeled rows for the metadata cells. */
+    table.data td[data-label]::before { content:attr(data-label); color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; align-self:center; }
+    table.data td[data-label="Year"] { display:none; } /* year shown inline with title */
+    table.data td[data-label="Genres"], table.data td[data-label="On"] { text-align:right; }
+    table.data td[data-label="On"] .svc-list { justify-content:flex-end; }
+
+    /* Modals become bottom sheets, comfortable for thumbs. */
+    .modal-backdrop { align-items:flex-end; padding:0; }
+    .modal { width:100%; border-radius:18px 18px 0 0; max-height:88vh; overflow:auto; padding:20px 18px calc(20px + env(safe-area-inset-bottom)); }
+    .seasongrid { grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); }
+    .seasonbox { padding:11px 10px; } /* bigger tap target */
+    .modal-foot { position:sticky; bottom:0; background:var(--panel); padding-top:12px; }
+    .modal-foot button, .wiznav button, .action-bar button { min-height:46px; }
+    .sm-list { max-height:40vh; }
+    .dt-top { gap:12px; }
+    .dt-poster { width:92px; }
+    .dt-poster img, .dt-poster .poster { width:92px; height:138px; }
+    .dt-head h2 { font-size:17px; }
+
+    /* Header: compact, sticky, logo + hamburger on one row.
+       NOTE: backdrop-filter makes an element the containing block for its
+       position:fixed descendants — which previously trapped the drawer inside
+       the header box (tiny, top-only). Drop it on mobile so the fixed drawer
+       anchors to the viewport and can cover the whole screen. */
+    header { padding:12px 14px; gap:10px; z-index:40; backdrop-filter:none; background:var(--bg); }
+    header .sub { display:none; }
+    header .brand { height:26px; }
+    .navToggle { display:flex; }
+    .brand { margin-left:2px; }
+    /* nav.tabs becomes a full-height slide-in drawer from the left, over
+       everything. z-index:45 sits above the header bar (40) and scrim (30). */
+    nav.tabs {
+      position:fixed; top:0; left:0; bottom:0; height:100%; width:min(80vw,300px); margin:0; z-index:45;
+      flex-direction:column; align-items:stretch; gap:4px;
+      background:var(--panel); border-right:1px solid var(--border);
+      padding:18px 14px calc(18px + env(safe-area-inset-bottom));
+      transform:translateX(-100%); transition:transform .22s ease; overflow-y:auto;
+      -webkit-overflow-scrolling:touch;
+    }
+    nav.tabs.open { transform:translateX(0); box-shadow:0 0 40px rgba(0,0,0,.5); }
+    nav.tabs button, nav.tabs a { width:100%; justify-content:flex-start; padding:13px 14px; font-size:15px; border:1px solid transparent; }
+    /* Mobile sort bar is shown just above the plan list. */
+    .sortbar { display:flex; }
+    /* Requests controls stack; pager spreads with comfy tap targets. */
+    .hist-controls { gap:10px; }
+    .hist-pagesize { width:100%; justify-content:space-between; }
+    .hist-pager { justify-content:space-between; }
+    .hist-pager button { min-height:44px; }
+
+    /* One-column forms + full-width primary actions. */
+    .grid2 { grid-template-columns:1fr; gap:0; }
+    .panel { padding:16px; border-radius:12px; }
+    .connections { flex-direction:column; align-items:flex-start; gap:8px; }
+    .action-bar { flex-direction:column; align-items:stretch; }
+    .action-bar button { width:100%; }
+    .action-bar .muted { text-align:center; }
+    /* Bigger inputs/selects for touch. */
+    input, select { padding:12px 13px; font-size:16px; } /* 16px avoids iOS zoom */
+    .chip { padding:10px 15px; }
+
+    /* Wizard: full-height sheet, scrollable, sticky nav. */
+    .wizwrap { padding:0; align-items:stretch; }
+    .wizcard { width:100%; min-height:100vh; border-radius:0; display:flex; flex-direction:column; padding:22px 18px calc(22px + env(safe-area-inset-bottom)); }
+    .wizbody { flex:1; }
+    .wizstep > em { display:none; } /* keep just the numbered bubbles on narrow screens */
+    .wiznav { position:sticky; bottom:0; background:var(--panel); padding-top:14px; }
+
+    .authcard { padding:24px 20px; }
+  }
+
+  /* Extra-small phones. */
+  @media (max-width:380px) {
+    .statgrid { grid-template-columns:1fr 1fr; }
+    table.data tr { padding-left:84px; }
+    td.c-poster .poster { width:60px; height:90px; }
+  }
+  .authwrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .authcard { background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:28px; width:min(380px,100%); box-shadow:var(--shadow); }
+  .authcard .brand { height:40px; width:auto; max-width:100%; display:block; margin:0 auto 18px; }
+  .authcard h1 { font-size:19px; margin:0 0 4px; }
+  .authcard p { margin:0 0 16px; }
+  .authcard label { margin-top:10px; }
+  .authcard button { width:100%; margin-top:18px; }
+  .authmsg { color:var(--err); font-size:13px; min-height:18px; margin-top:10px; }
+  .authmsg.ok-msg { color:var(--ok); }
+  /* First-run wizard */
+  .wizwrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .wizcard { background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:28px; width:min(560px,100%); box-shadow:var(--shadow); }
+  .wizcard .brand { height:34px; display:block; margin:0 auto 20px; }
+  .wizcard h1 { font-size:20px; margin:0 0 6px; }
+  .wizcard p { margin:0 0 14px; }
+  .wizcard label { display:block; font-size:13px; color:var(--muted); margin:12px 0 6px; }
+  .wizcard input, .wizcard select { width:100%; padding:10px 12px; border-radius:9px; border:1px solid var(--border); background:var(--panel2); color:var(--fg); font-size:14px; }
+  .wizcard input:focus, .wizcard select:focus { outline:none; border-color:var(--accent); }
+  .wizsteps { display:flex; gap:6px; margin-bottom:22px; flex-wrap:wrap; }
+  .wizstep {
+    flex:1; min-width:58px; display:flex; flex-direction:column; align-items:center; gap:6px;
+    font-size:0; color:var(--muted);
+  }
+  .wizstep { /* the bubble is the span's own box via ::first-line trick avoided; use inner layout */ }
+  .wizstep > em { font-style:normal; font-size:11px; letter-spacing:.02em; order:2; }
+  /* Render the number/✓ (the span's text node) as a circular bubble. */
+  .wizstep { position:relative; padding-top:0; }
+  .wizstep { line-height:1; }
+  .wizstep { display:flex; }
+  .wizstep { }
+  .wizbubble { width:26px; height:26px; border-radius:50%; border:2px solid var(--border); background:var(--panel2); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:var(--muted); order:1; }
+  .wizstep.active .wizbubble { border-color:var(--accent); color:var(--fg); box-shadow:0 0 0 3px rgba(91,140,255,.25); }
+  .wizstep.active > em { color:var(--fg); font-weight:600; }
+  .wizstep.done .wizbubble { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .wiznav { display:flex; justify-content:space-between; gap:12px; margin-top:22px; }
+  .wiznav button { padding:11px 20px; }
+  .wiznav .primary { margin-left:auto; }
+  button.ghost { background:transparent; border:1px solid var(--border); color:var(--muted); }
+  button.ghost:hover { color:var(--fg); border-color:var(--accent); }
+  .wverify { margin-top:14px; width:100%; }
+  .wopts { margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+  code { background:var(--panel2); padding:1px 6px; border-radius:5px; font-size:12px; }
+  .keybox { display:flex; gap:8px; align-items:center; margin-top:10px; background:var(--panel2); border:1px solid var(--accent); border-radius:9px; padding:10px 12px; }
+  .keybox code { background:none; font-size:13px; word-break:break-all; }
+</style>
+</head>
+<body>
+<header>
+  <button class="navToggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenu">
+    <span></span><span></span><span></span>
+  </button>
+  <img class="brand" src="/logo.png" alt="toprr" />
+  <span class="sub">Most popular, Everywhere!</span>
+  <nav class="tabs" id="navMenu" aria-label="Primary"></nav>
+</header>
+<div class="nav-scrim" id="navScrim" hidden></div>
+<main>
+  <!-- DASHBOARD TAB -->
+  <div class="tabpage active" id="tab-dashboard">
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Feed</h2>
+          <p class="desc">What toprr pulls the Top 10 from — changes save automatically.</p>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>Country</label>
+          <select id="country"><option>Loading…</option></select>
+        </div>
+        <div class="field">
+          <label>Items per list</label>
+          <input type="number" id="limit" min="1" max="10" value="10" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Streaming services</label>
+        <div class="services" id="services"><span class="muted">Set your API key in Settings, then reload to list services.</span></div>
+      </div>
+      <div class="save-note"><span class="muted" id="saveFeedMsg">Changes save automatically.</span></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Overview</h2>
+          <p class="desc">Your feed at a glance — totals, connections, and new titles to request.</p>
+        </div>
+      </div>
+      <div class="statgrid" id="stats"></div>
+      <div class="connections">
+        <span class="conn-label">Connections</span>
+        <div class="conn-pills" id="backends"></div>
+      </div>
+      <div class="quota" id="quota" style="display:none"></div>
+      <div class="action-bar">
+        <button class="primary" id="btnDry">Check for new titles</button>
+        <button class="danger" id="btnSubmit" disabled>Submit requests</button>
+        <span class="muted" id="syncMsg"></span>
+      </div>
+      <div id="planWrap" style="margin-top:14px"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Recent requests</h2>
+          <p class="desc" id="recentDesc">The last titles toprr requested, with live library status.</p>
+        </div>
+        <button class="mini" data-goto="requests">View all →</button>
+      </div>
+      <div id="recentWrap"><div class="spinner-center"><span class="spin-slot"></span></div></div>
+    </section>
+  </div>
+
+  <!-- REQUESTS TAB -->
+  <div class="tabpage" id="tab-requests">
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Request history</h2>
+          <p class="desc">Every title toprr has requested, with live library status from Radarr/Sonarr. Search by title and page through the full history.</p>
+        </div>
+      </div>
+      <div id="historyWrap"><div class="spinner-center"><span class="spin-slot"></span></div></div>
+    </section>
+  </div>
+
+  <!-- ABOUT TAB -->
+  <div class="tabpage" id="tab-about">
+    <section class="panel about-hero">
+      <img class="about-logo" src="/logo.png" alt="toprr" />
+      <p class="desc">Most popular, everywhere — the daily Top 10 across your streaming services, requested via Radarr / Sonarr (or Seerr).</p>
+      <div class="statgrid" id="aboutStats">
+        <div class="stat"><div class="label">Version</div><div class="value" id="aboutVersion">—</div></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>About toprr</h2>
+      <p class="desc">A deployable TypeScript app that fetches the daily Top 10 movies and TV shows
+      from your chosen streaming services, deduplicates them into a single feeding list, and
+      requests genuinely new titles — never re-requesting anything already in your library.</p>
+      <div class="dt-row"><span>Data</span><b>Streaming Availability API (movieofthenight.com)</b></div>
+      <div class="dt-row"><span>Requests</span><b>Radarr / Sonarr directly — Seerr (Overseerr/Jellyseerr) is optional</b></div>
+      <div class="dt-row"><span>Enrichment</span><b>TMDB (posters, score, language, seasons — optional)</b></div>
+      <div class="dt-row"><span>License</span><b>MIT</b></div>
+      <div class="dt-links">
+        <a class="dt-link" href="/docs" target="_blank" rel="noopener">Documentation and API</a>
+      </div>
+      <p class="hint" style="margin-top:14px">Streaming data provided by the
+        <a class="title-link" href="https://www.movieofthenight.com/about/api" target="_blank" rel="noopener">Streaming Availability API</a>
+        by Movie of the Night.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Changelog</h2>
+      <p class="desc">Notable changes.</p>
+      <div class="changelog" id="changelog"></div>
+    </section>
+  </div>
+
+  <!-- SETTINGS TAB -->
+  <div class="tabpage" id="tab-settings">
+    <section class="panel">
+      <h2>API keys</h2>
+      <p class="desc">Keys are stored server-side and never shown in full. Leave a key blank to keep the existing value.</p>
+      <div class="field">
+        <label>Streaming Availability API key</label>
+        <input type="password" id="apiKey" placeholder="(leave blank to keep existing)" />
+        <div class="hint" id="apiKeyHint"></div>
+      </div>
+      <div class="field">
+        <label>TMDB API key <span class="muted">(optional — enables posters, score, language, seasons)</span></label>
+        <input type="password" id="tmdbKey" placeholder="(leave blank to keep existing)" />
+        <div class="hint" id="tmdbKeyHint"></div>
+      </div>
+      <div class="action-bar" style="border-top:none;padding-top:0;margin-top:4px">
+        <button class="primary" id="btnSaveKeys">Save keys</button>
+        <span class="muted" id="saveKeysMsg"></span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Request handling</h2>
+      <p class="desc">Choose where toprr sends requests. Radarr/Sonarr also report live library status.</p>
+      <div class="field">
+        <label>Request provider</label>
+        <select id="requestProvider">
+          <option value="arr">Radarr / Sonarr (direct) — Seerr not required</option>
+          <option value="seerr">Overseerr / Jellyseerr</option>
+        </select>
+      </div>
+
+      <div class="grid2">
+        <div class="field"><label>Radarr URL</label><input type="text" id="radarrUrl" placeholder="https://radarr.example.com" /></div>
+        <div class="field"><label>Radarr API key</label><input type="password" id="radarrKey" placeholder="(leave blank to keep existing)" /><div class="hint" id="radarrKeyHint"></div></div>
+      </div>
+      <div class="btnrow"><button class="ghost btn-verify" data-kind="radarr">Verify Radarr</button><span class="verify-msg" id="radarrVerify"></span></div>
+      <div class="grid2 arr-opts">
+        <div class="field"><label>Radarr quality profile</label><select id="radarrProfile"><option value="">—</option></select></div>
+        <div class="field"><label>Radarr root folder</label><select id="radarrRoot"><option value="">—</option></select></div>
+      </div>
+
+      <div class="grid2">
+        <div class="field"><label>Sonarr URL</label><input type="text" id="sonarrUrl" placeholder="https://sonarr.example.com" /></div>
+        <div class="field"><label>Sonarr API key</label><input type="password" id="sonarrKey" placeholder="(leave blank to keep existing)" /><div class="hint" id="sonarrKeyHint"></div></div>
+      </div>
+      <div class="btnrow"><button class="ghost btn-verify" data-kind="sonarr">Verify Sonarr</button><span class="verify-msg" id="sonarrVerify"></span></div>
+      <div class="grid2 arr-opts">
+        <div class="field"><label>Sonarr quality profile</label><select id="sonarrProfile"><option value="">—</option></select></div>
+        <div class="field"><label>Sonarr root folder</label><select id="sonarrRoot"><option value="">—</option></select></div>
+      </div>
+
+      <div id="seerrFields">
+        <p class="desc" style="margin-top:8px">Seerr <span class="muted">(only needed if provider is Overseerr/Jellyseerr)</span></p>
+        <div class="grid2">
+          <div class="field"><label>Seerr URL</label><input type="text" id="seerrUrl" placeholder="https://seerr.example.com" /></div>
+          <div class="field"><label>Seerr API key</label><input type="password" id="seerrKey" placeholder="(leave blank to keep existing)" /><div class="hint" id="seerrKeyHint"></div></div>
+        </div>
+        <div class="btnrow"><button class="ghost btn-verify" data-kind="seerr">Verify Seerr</button><span class="verify-msg" id="seerrVerify"></span></div>
+      </div>
+
+      <div class="btnrow">
+        <button class="primary" id="btnSave">Save settings</button>
+        <button id="btnRefreshOpts">Refresh profiles/folders</button>
+        <span class="muted" id="saveMsg"></span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Account &amp; API access</h2>
+      <p class="desc">Your login and the API key for programmatic access (send it as the <code>X-Api-Key</code> header). See the <a href="/docs" target="_blank" rel="noopener" class="title-link">API reference &amp; schema →</a></p>
+      <div class="grid2">
+        <div class="field">
+          <label>Username</label>
+          <input type="text" id="acUser" autocomplete="username" />
+          <div class="btnrow"><button id="btnUsername">Update username</button><span class="muted" id="userMsg"></span></div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>Current password</label>
+          <input type="password" id="acCurPass" autocomplete="current-password" />
+        </div>
+        <div class="field">
+          <label>New password</label>
+          <input type="password" id="acNewPass" autocomplete="new-password" />
+        </div>
+      </div>
+      <div class="btnrow"><button id="btnPassword">Change password</button><span class="muted" id="passMsg"></span></div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:18px 0" />
+      <div class="field">
+        <label>API key</label>
+        <div id="apiKeyState" class="muted">—</div>
+        <div class="btnrow">
+          <button class="primary" id="btnRotateKey">Generate / rotate key</button>
+          <button class="danger" id="btnRevokeKey">Revoke</button>
+          <span class="muted" id="keyMsg"></span>
+        </div>
+        <div id="apiKeyReveal"></div>
+      </div>
+    </section>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+<script type="module" src="/app.js"></script>
+</body>
+</html>
