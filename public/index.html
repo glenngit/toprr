@@ -18,6 +18,7 @@
   }
   * { box-sizing:border-box; }
   html { scroll-behavior:smooth; }
+  html, body { max-width:100%; overflow-x:hidden; }
   body {
     margin:0; font:14px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
     background:radial-gradient(1200px 600px at 70% -10%, #1a2030 0%, var(--bg) 55%); color:var(--fg); min-height:100vh;
@@ -172,6 +173,13 @@
   .spinner-center .spinner { font-size:15px; }
   table.data thead th { background:var(--panel); }
   .yr-inline { display:none; }
+  /* Plan collapse: fold the submitted list with a quick animation; a toggle
+     lets the user expand it again. */
+  .plan-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+  .plan-toggle[hidden] { display:none; }
+  .plan-collapse { overflow:hidden; max-height:4000px; opacity:1; transition:max-height .45s ease, opacity .3s ease; }
+  .plan-collapse.collapsed { max-height:0; opacity:0; }
+  @media (prefers-reduced-motion: reduce) { .plan-collapse { transition:none; } }
   /* Mobile sort bar — hidden on desktop (headers handle sorting there). */
   .sortbar { display:none; gap:8px; align-items:flex-end; margin-bottom:12px; }
   .sortbar .sort-field { flex:1; }
@@ -269,7 +277,10 @@
     }
     /* Plan rows carry a checkbox — reserve a right gutter so it never overlaps. */
     table.data.plan tr { padding-right:48px; }
-    table.data td { display:flex; justify-content:space-between; gap:12px; border:none; padding:4px 0; font-size:13px; }
+    table.data td { display:flex; justify-content:space-between; gap:12px; border:none; padding:4px 0; font-size:13px; min-width:0; }
+    table.data td > * { min-width:0; }
+    table.data td[data-label]::after,
+    table.data td .svc-list { flex:1 1 auto; min-width:0; }
     /* Checkbox pinned in its own reserved right gutter (card reserves 48px on
        the right via padding) so it can never overlap the title or inline year. */
     td.c-pick { position:absolute; top:12px; right:12px; padding:0; width:20px; }
@@ -277,7 +288,8 @@
     td.c-poster { position:absolute; top:12px; left:12px; padding:0; }
     td.c-poster .poster { width:68px; height:102px; }
     table.data tr.no-poster { padding-left:12px; min-height:0; }
-    td.c-title { font-size:15px; font-weight:600; padding-right:0; margin-bottom:4px; }
+    td.c-title { font-size:15px; font-weight:600; padding-right:0; margin-bottom:4px; overflow-wrap:anywhere; display:block; }
+    td.c-title .pill { white-space:normal; }
     .yr-inline { display:inline; font-weight:400; }
     /* Labeled rows for the metadata cells. */
     table.data td[data-label]::before { content:attr(data-label); color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; align-self:center; }
@@ -324,6 +336,7 @@
     .sortbar { display:flex; }
     /* Requests controls stack; pager spreads with comfy tap targets. */
     .hist-controls { gap:10px; }
+    .hist-search { min-width:0; flex:1 1 100%; }
     .hist-pagesize { width:100%; justify-content:space-between; }
     .hist-pager { justify-content:space-between; }
     .hist-pager button { min-height:44px; }

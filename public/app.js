@@ -518,6 +518,39 @@ async function patchHistoryStatus(offset, pageSize = historyPageSize) {
   } catch { /* leave placeholders if status/poster fetch fails */ }
 }
 
+// Patch the Library/status cells of rows with a given id-prefix from a fresh
+// status fetch — used to reflect live Radarr/Sonarr download progress on the
+// dashboard preview without re-rendering the whole table.
+async function patchRowsStatus(prefix, limit) {
+  let data;
+  try { data = await api(`/api/history?limit=${limit}&offset=0&status=true`); }
+  catch { return; }
+  for (const r of data.records) {
+    const rowId = `${prefix}-${r.mediaType}-${r.tmdbId}-${r.requestedAt.replace(/[^0-9]/g, "")}`;
+    const row = document.getElementById(rowId);
+    if (!row) continue;
+    const cell = row.querySelector(".lib-cell");
+    if (cell) cell.innerHTML = statusCellHtml(r.status);
+  }
+}
+
+// Periodically refresh live download/library status + backend connections so
+// the dashboard reflects Radarr/Sonarr activity without a manual reload. Demo
+// mode polls faster (snappy simulated downloads); production stays gentle.
+let statusPollTimer = null;
+function startStatusPoller() {
+  if (statusPollTimer) return;
+  const everyMs = window.__DEMO__ ? 4000 : 15000;
+  statusPollTimer = setInterval(() => {
+    // Refresh connection pills + queue sizes.
+    loadStatus();
+    // Advance the dashboard recent preview's download bars.
+    if (document.getElementById("recentBody")) patchRowsStatus("recent", isNarrow() ? 5 : 10);
+    // And the Requests page, if that's what's open.
+    if (document.getElementById("histBody")) patchRowsStatus("hist", historyPageSize);
+  }, everyMs);
+}
+
 // Re-render history "On" cells once service logo metadata is available
 // (history can render before loadCountries() populates serviceMeta).
 function refreshHistoryServiceLogos() {
@@ -1013,9 +1046,19 @@ function renderPlan(plan) {
     </tr>`;
   }).join("");
 
-  $("planWrap").innerHTML = `<p class="muted">${currentPlan.length} new title(s). Hover a row for the overview. <b>Tick the titles you want</b>, then Submit requests.</p>
-    ${sortBarHtml()}
-    <table class="data plan"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+  $("planWrap").innerHTML = `
+    <div class="plan-head">
+      <p class="muted" style="margin:0">${currentPlan.length} new title(s). Hover a row for the overview. <b>Tick the titles you want</b>, then Submit requests.</p>
+      <button type="button" class="mini plan-toggle" id="planToggle" aria-expanded="true" hidden>Show list ▾</button>
+    </div>
+    <div class="plan-collapse" id="planCollapse">
+      ${sortBarHtml()}
+      <table class="data plan"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>
+    </div>`;
+
+  // Collapse/expand toggle (revealed after a submit; always usable manually).
+  const planToggle = $("planToggle");
+  if (planToggle) planToggle.addEventListener("click", () => togglePlanCollapsed());
 
   wireSortBar();
 
@@ -1037,6 +1080,23 @@ function renderPlan(plan) {
     n.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); open(); } });
   });
   updateSubmitCount();
+}
+
+// ---- Plan collapse (after submit, fold the list so the live requests show) ----
+function setPlanCollapsed(collapsed) {
+  const box = $("planCollapse");
+  const toggle = $("planToggle");
+  if (!box) return;
+  box.classList.toggle("collapsed", collapsed);
+  if (toggle) {
+    toggle.hidden = false; // once used, keep the control available
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+    toggle.textContent = collapsed ? "Show list ▾" : "Hide list ▴";
+  }
+}
+function togglePlanCollapsed() {
+  const box = $("planCollapse");
+  if (box) setPlanCollapsed(!box.classList.contains("collapsed"));
 }
 
 // Recompute a title's season selection from its (modal) checkboxes.
@@ -1181,8 +1241,13 @@ async function runSync(submit) {
       if (r.quota !== undefined) renderQuota(r.quota);
     } else {
       $("syncMsg").textContent = `Requested ${r.requested}, failed ${r.failed.length}, skipped ${r.skippedExisting}`;
+      // Fold the submitted list with a quick animation so attention shifts to
+      // the requests doing their job; it can be expanded again via the toggle.
+      setPlanCollapsed(true);
       await loadHistory(); await loadRecent(); await loadStatus(); toast(`Submitted ${r.requested} request(s)`);
-      await runSync(false);
+      // Bring the recent-requests preview into view so the user sees them work.
+      const recent = $("recentWrap");
+      if (recent && recent.scrollIntoView) recent.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   } catch (err) { $("syncMsg").textContent = err.message; }
   finally { if (!submit) btn.disabled = false; }
@@ -1503,4 +1568,6 @@ async function logout() {
   // loadCountries() made a Streaming API call that captured the quota headers;
   // refresh status once so the quota meter reflects the latest snapshot.
   loadStatus();
+  // Keep download/library status + connections live without a manual reload.
+  startStatusPoller();
 })();
