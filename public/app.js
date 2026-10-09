@@ -1344,6 +1344,7 @@ function showAuthGate(mode) {
         <input id="auPass" type="password" autocomplete="current-password" required />
         <button class="primary" type="submit">Sign in</button>
         <p class="authmsg" id="auMsg"></p>
+        <p class="auth-gh"><a href="https://github.com/glenngit/toprr" target="_blank" rel="noopener">★ View toprr on GitHub ↗</a></p>
       </form>
     </div>`;
   document.getElementById("authForm").addEventListener("submit", async (ev) => {
