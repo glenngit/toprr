@@ -448,6 +448,7 @@ initial config (and support headless CLI use):
 | `RADARR_URL` / `RADARR_API_KEY`  | —       | Radarr backend (movie requests + status).         |
 | `SONARR_URL` / `SONARR_API_KEY`  | —       | Sonarr backend (TV requests + status).            |
 | `PORT`                           | `9797`  | Web GUI port.                                     |
+| `HOST`                           | all     | Bind address. Unset = all interfaces (needed for Docker). Set `127.0.0.1` to listen on localhost only. |
 | `LOG_DIR`                        | `logs`  | Directory for log files.                          |
 
 `.env`, `data/` and `logs/` are git-ignored, so keys are never committed.

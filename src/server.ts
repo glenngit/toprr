@@ -771,7 +771,13 @@ const server = createServer((req, res) => {
 });
 
 const port = Number(process.env.PORT ?? "9797") || 9797;
-server.listen(port, () => {
-  void logger.info("toprr web GUI started", { port });
-  console.error(`toprr web GUI listening on http://localhost:${port}`);
+// Optional bind address. Defaults to all interfaces so Docker port mapping
+// works out of the box. Set HOST=127.0.0.1 to listen on localhost only (e.g.
+// when a reverse proxy on the same host is the sole intended client).
+const host = process.env.HOST?.trim() || undefined;
+server.listen(port, host, () => {
+  void logger.info("toprr web GUI started", { port, host: host ?? "::" });
+  console.error(
+    `toprr web GUI listening on http://${host ?? "localhost"}:${port}`,
+  );
 });

@@ -11,14 +11,28 @@ services:
     # only instead:  "127.0.0.1:9797:9797"
     ports:
       - "9797:9797"
+      # --- Common overrides (uncomment one) ---
+      # Different host port, same container port (browse at host:8080):
+      # - "8080:9797"
+      # Localhost only — reach it via a reverse proxy on this host:
+      # - "127.0.0.1:9797:9797"
     environment:
       PORT: "9797"
       LOG_DIR: /app/logs
+      # --- Common overrides ---
+      # Restrict the in-container listen address (default: all interfaces).
+      # Pair with a 127.0.0.1 reverse proxy; leave unset for normal Docker use.
+      # HOST: "127.0.0.1"
+      # Change the app's internal port too (match the container side of `ports`):
+      # PORT: "8080"
       # Optional: seed initial config on first run (otherwise set via the GUI).
       # Everything here is OPTIONAL — the app can be fully configured in Settings.
+      # FEED_COUNTRY: "us"
+      # FEED_SERVICES: "apple,netflix,prime,hbo"
+      # FEED_LIMIT: "10"
+      # REQUEST_PROVIDER: "arr"        # or "seerr"
       # STREAMING_AVAILABILITY_API_KEY: ""
       # TMDB_API_KEY: ""
-      # FEED_COUNTRY: "us"
     volumes:
       # Persist config (incl. credential hashes) and logs across restarts.
       - toprr-data:/app/data
