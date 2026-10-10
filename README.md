@@ -334,6 +334,34 @@ your keys) and logs persist in named volumes (`toprr-data`, `toprr-logs`), so
 they survive `docker compose down && up`. The container runs `read_only` with
 `no-new-privileges`.
 
+### Pull the prebuilt image from GHCR
+
+Prefer not to build from source? A multi-arch image (`linux/amd64` +
+`linux/arm64`) is published to the GitHub Container Registry on every push to
+`main` and every `v*` tag:
+
+```bash
+docker pull ghcr.io/glenngit/toprr:latest
+```
+
+Run it directly:
+
+```bash
+docker run -d --name toprr -p 9797:9797 \
+  -v toprr-data:/app/data -v toprr-logs:/app/logs \
+  ghcr.io/glenngit/toprr:latest
+```
+
+Or point Compose at the published image instead of building locally — edit
+`docker-compose.yml` and replace `build: .` with:
+
+```yaml
+    image: ghcr.io/glenngit/toprr:latest
+```
+
+Pin to a release tag (e.g. `:1.0.1`) instead of `:latest` for reproducible
+deploys. The image is public, so no `docker login` is needed to pull.
+
 ### Reaching it from another device
 
 By default the compose file binds to **all interfaces** (`9797:9797`), so the
