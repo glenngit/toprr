@@ -362,6 +362,63 @@ Or point Compose at the published image instead of building locally — edit
 Pin to a release tag (e.g. `:1.0.1`) instead of `:latest` for reproducible
 deploys. The image is public, so no `docker login` is needed to pull.
 
+#### What you can pre-set (environment variables)
+
+Everything below is **optional** — the image boots with zero config and the
+first-run wizard / Settings can set it all in the GUI. But you can pre-seed any
+of these with `-e` on `docker run` (or an `environment:` block in Compose).
+Secrets are seeded on **first run** only; afterwards the server-side config is
+the source of truth, so leave them out and use the GUI if you prefer.
+
+```bash
+docker run -d --name toprr -p 9797:9797 \
+  -v toprr-data:/app/data -v toprr-logs:/app/logs \
+  # --- networking ---
+  -e PORT=9797 \
+  -e HOST=0.0.0.0 \                       # 127.0.0.1 = localhost only
+  -e LOG_DIR=/app/logs \
+  # --- feed behaviour ---
+  -e FEED_COUNTRY=us \
+  -e FEED_SERVICES=apple,netflix,prime,hbo \
+  -e FEED_LIMIT=10 \
+  # --- request routing ---
+  -e REQUEST_PROVIDER=arr \               # arr (Radarr/Sonarr) or seerr
+  -e RADARR_URL=http://radarr:7878 -e RADARR_API_KEY=... \
+  -e RADARR_PROFILE_ID=1 -e RADARR_ROOT=/movies \
+  -e SONARR_URL=http://sonarr:8989 -e SONARR_API_KEY=... \
+  -e SONARR_PROFILE_ID=1 -e SONARR_ROOT=/tv \
+  -e SEERR_URL=http://seerr:5055 -e SEERR_API_KEY=... \
+  # --- metadata enrichment ---
+  -e STREAMING_AVAILABILITY_API_KEY=... \
+  -e TMDB_API_KEY=... \
+  ghcr.io/glenngit/toprr:latest
+```
+
+| Env var | Default | What it pre-sets |
+| ------- | ------- | ---------------- |
+| `PORT` | `9797` | In-container listen port (match the right-hand side of `-p`). |
+| `HOST` | all interfaces | Bind address. Set `127.0.0.1` to listen on localhost only (reach via a reverse proxy). |
+| `LOG_DIR` | `/app/logs` | Where NDJSON logs are written (keep it on the mounted `toprr-logs` volume). |
+| `FEED_COUNTRY` | `us` | ISO 3166-1 alpha-2 country code. |
+| `FEED_SERVICES` | `apple,netflix,prime,hbo` | Comma-separated service codes to track (seed only). |
+| `FEED_LIMIT` | `10` | Items per Top list. |
+| `REQUEST_PROVIDER` | `arr` | `arr` = Radarr/Sonarr direct, or `seerr`. |
+| `RADARR_URL` / `RADARR_API_KEY` | — | Radarr backend (movie requests + status). |
+| `RADARR_PROFILE_ID` | backend default | Numeric Radarr quality-profile id for new movie requests. |
+| `RADARR_ROOT` | backend default | Radarr root folder path for new movies. |
+| `SONARR_URL` / `SONARR_API_KEY` | — | Sonarr backend (TV requests + status). |
+| `SONARR_PROFILE_ID` | backend default | Numeric Sonarr quality-profile id for new series. |
+| `SONARR_ROOT` | backend default | Sonarr root folder path for new series. |
+| `SEERR_URL` / `SEERR_API_KEY` | — | Seerr instance (only when `REQUEST_PROVIDER=seerr`). |
+| `STREAMING_AVAILABILITY_API_KEY` | — | Streaming Availability key (sent as `X-API-Key`). |
+| `TMDB_API_KEY` | — | TMDB v3 key **or** v4 Read Access Token — enables posters, score, language, seasons. |
+
+> Volumes are the other half of configuration: keep `-v toprr-data:/app/data`
+> (config + credential hashes + history + cached logos) and
+> `-v toprr-logs:/app/logs` so state survives a container recreate. Swap the
+> named volumes for host paths (e.g. `-v ./data:/app/data`) if you'd rather see
+> the files on disk.
+
 ### Reaching it from another device
 
 By default the compose file binds to **all interfaces** (`9797:9797`), so the
