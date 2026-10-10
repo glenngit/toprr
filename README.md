@@ -364,33 +364,17 @@ deploys. The image is public, so no `docker login` is needed to pull.
 
 #### What you can pre-set (environment variables)
 
-Everything below is **optional** — the image boots with zero config and the
-first-run wizard / Settings can set it all in the GUI. But you can pre-seed any
-of these with `-e` on `docker run` (or an `environment:` block in Compose).
-Secrets are seeded on **first run** only; afterwards the server-side config is
-the source of truth, so leave them out and use the GUI if you prefer.
+**Every variable below is optional** — the image boots with zero config and the
+first-run wizard / Settings can set it all in the GUI. You can pre-seed any of
+them with `-e` on `docker run` (or an `environment:` block in Compose); secrets
+are seeded on **first run** only, after which the server-side config is the
+source of truth. The example sets just the port — see the full table below for
+everything else you can pre-set.
 
 ```bash
 docker run -d --name toprr -p 9797:9797 \
   -v toprr-data:/app/data -v toprr-logs:/app/logs \
-  # --- networking ---
   -e PORT=9797 \
-  -e HOST=0.0.0.0 \                       # 127.0.0.1 = localhost only
-  -e LOG_DIR=/app/logs \
-  # --- feed behaviour ---
-  -e FEED_COUNTRY=us \
-  -e FEED_SERVICES=apple,netflix,prime,hbo \
-  -e FEED_LIMIT=10 \
-  # --- request routing ---
-  -e REQUEST_PROVIDER=arr \               # arr (Radarr/Sonarr) or seerr
-  -e RADARR_URL=http://radarr:7878 -e RADARR_API_KEY=... \
-  -e RADARR_PROFILE_ID=1 -e RADARR_ROOT=/movies \
-  -e SONARR_URL=http://sonarr:8989 -e SONARR_API_KEY=... \
-  -e SONARR_PROFILE_ID=1 -e SONARR_ROOT=/tv \
-  -e SEERR_URL=http://seerr:5055 -e SEERR_API_KEY=... \
-  # --- metadata enrichment ---
-  -e STREAMING_AVAILABILITY_API_KEY=... \
-  -e TMDB_API_KEY=... \
   ghcr.io/glenngit/toprr:latest
 ```
 
