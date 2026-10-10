@@ -1,8 +1,8 @@
 services:
   toprr:
     build: .
-    # Or use a published image once you push one to your registry:
-    # image: registry.gitlab.com/<you>/toprr:latest
+    # Or use the published image instead of building from source:
+    # image: ghcr.io/glenngit/toprr:latest
     container_name: toprr
     restart: unless-stopped
     # Published on all interfaces so it's reachable from other machines.
